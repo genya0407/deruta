@@ -1,0 +1,1376 @@
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="ja">
+  <title>さんちゃのblog</title>
+  
+  <link href="http://dawn.hateblo.jp/"/>
+  <updated>2018-05-07T19:50:26+09:00</updated>
+  <author>
+    <name>threetea0407</name>
+  </author>
+  <generator uri="http://blog.hatena.ne.jp/" version="f9f6b03bb12a51748bef080f6c8f0e6a">Hatena::Blog</generator>
+  <id>hatenablog://blog/10328749687251073169</id>
+
+  
+    
+    
+    <entry>
+        <title>トップレベルスタイルSinatraの起動プロセス</title>
+        <link href="http://dawn.hateblo.jp/entry/2018/05/07/195026"/>
+        <id>hatenablog://entry/17391345971642073068</id>
+        <published>2018-05-07T19:50:26+09:00</published>
+        <updated>2018-05-07T19:50:26+09:00</updated>        <summary type="html">トップレベルスタイル とは、以下のような書き方のことを指します： require &#39;sinatra&#39; get &#39;/hello&#39; do &#39;hogehoge&#39; end このスタイルで書かれたSinatraアプリケーションが、どのような手続きで起動しているのかを解説します。 TL;DR 以下のようなトップレベルスタイルのSinatraアプリケーションは、 require &#39;sinatra&#39; get &#39;/&#39; do &#39;hoge&#39; end 以下のようなコードと概ね等価ということです： # 空のモジュラーアプリの定義 require &#39;sinatra/base&#39; class Application &lt; Si…</summary>
+        <content type="html">&lt;p&gt;&lt;strong&gt;トッ&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D7%A5%EC%A5%D9&quot;&gt;プレベ&lt;/a&gt;ルスタイル&lt;/strong&gt; とは、以下のような書き方のことを指します：&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/hello&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hogehoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;このスタイルで書かれた&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Sinatra&quot;&gt;Sinatra&lt;/a&gt;アプリケーションが、どのような手続きで起動しているのかを解説します。&lt;/p&gt;
+
+&lt;h1&gt;TL;DR&lt;/h1&gt;
+
+&lt;p&gt;以下のようなトッ&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D7%A5%EC%A5%D9&quot;&gt;プレベ&lt;/a&gt;ルスタイルの&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Sinatra&quot;&gt;Sinatra&lt;/a&gt;アプリケーションは、&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;以下のようなコードと概ね等価ということです：&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synComment&quot;&gt;# 空のモジュラーアプリの定義&lt;/span&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra/base&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+&lt;span class=&quot;synPreProc&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt; &amp;lt; &lt;span class=&quot;synType&quot;&gt;Sinatra&lt;/span&gt;::&lt;span class=&quot;synType&quot;&gt;Base&lt;/span&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;synComment&quot;&gt;# DSLの定義&lt;/span&gt;
+[&lt;span class=&quot;synConstant&quot;&gt;:get&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;:post&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;:put&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;:delete&lt;/span&gt;].each &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt; |&lt;span class=&quot;synIdentifier&quot;&gt;method_name&lt;/span&gt;|
+  define_method method_name &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt; |*&lt;span class=&quot;synIdentifier&quot;&gt;args&lt;/span&gt;, &amp;amp;&lt;span class=&quot;synIdentifier&quot;&gt;blk&lt;/span&gt;|
+    &lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt;.send(method_name, *args, &amp;amp;blk)
+  &lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;synComment&quot;&gt;# Webサーバー起動処理の登録&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;at_exit&lt;/span&gt; { &lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt;.run! }
+
+&lt;span class=&quot;synComment&quot;&gt;# アプリケーションの定義&lt;/span&gt;
+get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;h1&gt;解説&lt;/h1&gt;
+
+&lt;h2&gt;モジュラースタイル&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Sinatra&quot;&gt;Sinatra&lt;/a&gt;では、上記のようなトッ&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D7%A5%EC%A5%D9&quot;&gt;プレベ&lt;/a&gt;ルスタイルを用いる以外にも、 &lt;strong&gt;モジュラースタイル&lt;/strong&gt; を用いる方法があります。&lt;/p&gt;
+
+&lt;p&gt;モジュラースタイルというのは、以下のような書き方を指します：&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra/base&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+&lt;span class=&quot;synPreProc&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;synType&quot;&gt;MySinatraApplication&lt;/span&gt; &amp;lt; &lt;span class=&quot;synType&quot;&gt;Sinatra&lt;/span&gt;::&lt;span class=&quot;synType&quot;&gt;Base&lt;/span&gt;
+  get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/hello&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hogehoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+  &lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;synType&quot;&gt;MySinatraApplication&lt;/span&gt;.run!
+&lt;/pre&gt;
+
+
+&lt;p&gt;この用に定義されたWebアプリケーションのことを &lt;strong&gt;モジュラーアプリ&lt;/strong&gt; と呼びます。&lt;/p&gt;
+
+&lt;h2&gt;空のモジュラーアプリの定義&lt;/h2&gt;
+
+&lt;p&gt;&lt;code&gt;require &#39;sinatra&#39;&lt;/code&gt; と書くと、 &lt;code&gt;Sinatra::Application&lt;/code&gt; という名前の空のモジュラーアプリが定義されます。&lt;/p&gt;
+
+&lt;h2&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/DSL&quot;&gt;DSL&lt;/a&gt;の定義&lt;/h2&gt;
+
+&lt;p&gt;また、&lt;code&gt;require &#39;sinatra&#39;&lt;/code&gt; が実行されることで、 &lt;code&gt;Sinatra::Delegator&lt;/code&gt; というモジュールがグローバルに &lt;code&gt;extend&lt;/code&gt; され、&lt;code&gt;get&lt;/code&gt; とか &lt;code&gt;post&lt;/code&gt; などの、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Sinatra&quot;&gt;Sinatra&lt;/a&gt;の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/DSL&quot;&gt;DSL&lt;/a&gt;で使われるメソッドが定義されます。&lt;/p&gt;
+
+&lt;p&gt;これらのメソッドは &lt;code&gt;Sinatra::Application.get&lt;/code&gt; や &lt;code&gt;Sinatra::Application.post&lt;/code&gt; に”リダイレクト”されます。&lt;/p&gt;
+
+&lt;p&gt;つまり、以下のコードは、&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;以下のコードと等価です：&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+&lt;span class=&quot;synType&quot;&gt;Sinatra&lt;/span&gt;::&lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt;.get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;詳しい実装が気になる人は &lt;a href=&quot;https://github.com/sinatra/sinatra/blob/master/lib/sinatra/base.rb#L1921&quot;&gt;sinatra/base.rb at master &amp;middot; sinatra/sinatra &amp;middot; GitHub&lt;/a&gt; を読んで下さい。
+&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%E1%A5%BF%A5%D7%A5%ED%A5%B0%A5%E9%A5%DF%A5%F3%A5%B0&quot;&gt;メタプログラミング&lt;/a&gt;のお手本のような使い方だと思います。&lt;/p&gt;
+
+&lt;h2&gt;サーバーの起動&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Ruby&quot;&gt;Ruby&lt;/a&gt;には &lt;code&gt;Kernel.#at_exit&lt;/code&gt; というメソッドがあります。
+このメソッドにブロックを与えると、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A4%A5%F3%A5%BF%A5%D7%A5%EA%A5%BF&quot;&gt;インタプリタ&lt;/a&gt;終了時にそのブロックが実行されます。&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;Application::Sinatra&lt;/code&gt; の定義の中で &lt;code&gt;at_exit&lt;/code&gt; が呼び出されている部分があり、Webサーバーの起動処理が登録されています。&lt;/p&gt;
+
+&lt;p&gt;これによって、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B9%A5%AF%A5%EA%A5%D7%A5%C8&quot;&gt;スクリプト&lt;/a&gt;の実行終了時にWebサーバーが起動します。&lt;/p&gt;
+
+&lt;h1&gt;まとめ&lt;/h1&gt;
+
+&lt;p&gt;つまり、以下のようなトッ&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D7%A5%EC%A5%D9&quot;&gt;プレベ&lt;/a&gt;ルスタイルの&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Sinatra&quot;&gt;Sinatra&lt;/a&gt;アプリケーションは、&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;以下のようなコードと概ね等価ということです：&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synComment&quot;&gt;# 空のモジュラーアプリの定義&lt;/span&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra/base&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+&lt;span class=&quot;synPreProc&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt; &amp;lt; &lt;span class=&quot;synType&quot;&gt;Sinatra&lt;/span&gt;::&lt;span class=&quot;synType&quot;&gt;Base&lt;/span&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;synComment&quot;&gt;# DSLの定義&lt;/span&gt;
+[&lt;span class=&quot;synConstant&quot;&gt;:get&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;:post&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;:put&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;:delete&lt;/span&gt;].each &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt; |&lt;span class=&quot;synIdentifier&quot;&gt;method_name&lt;/span&gt;|
+  define_method method_name &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt; |*&lt;span class=&quot;synIdentifier&quot;&gt;args&lt;/span&gt;, &amp;amp;&lt;span class=&quot;synIdentifier&quot;&gt;blk&lt;/span&gt;|
+    &lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt;.send(method_name, *args, &amp;amp;blk)
+  &lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;synComment&quot;&gt;# Webサーバー起動処理の登録&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;at_exit&lt;/span&gt; { &lt;span class=&quot;synType&quot;&gt;Application&lt;/span&gt;.run! }
+
+&lt;span class=&quot;synComment&quot;&gt;# アプリケーションの定義&lt;/span&gt;
+get &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+</content>        
+        <category term="Ruby" label="Ruby" />
+        
+        <category term="Sinatra" label="Sinatra" />
+        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <link rel="enclosure" href="https://cdn.blog.st-hatena.com/images/theme/og-image-1500.png" type="image/png" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>SinatraでaタグからPUTリクエストを投げる</title>
+        <link href="http://dawn.hateblo.jp/entry/2018/03/22/011129"/>
+        <id>hatenablog://entry/17391345971628086015</id>
+        <published>2018-03-22T01:11:29+09:00</published>
+        <updated>2018-05-30T21:29:06+09:00</updated>        <summary type="html">やりかた app.rb を↓のように書き、 require &#39;sinatra&#39; class Rack::MethodOverride ALLOWED_METHODS=%w[POST GET] def method_override(env) req = Rack::Request.new(env) method = req.params[METHOD_OVERRIDE_PARAM_KEY] || env[HTTP_METHOD_OVERRIDE_HEADER] method.to_s.upcase end end enable :method_override put &#39;/hoge&#39; do #…</summary>
+        <content type="html">&lt;h3&gt;やりかた&lt;/h3&gt;
+
+&lt;p&gt;&lt;code&gt;app.rb&lt;/code&gt; を↓のように書き、&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;sinatra&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;
+
+&lt;span class=&quot;synPreProc&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;synType&quot;&gt;Rack&lt;/span&gt;::&lt;span class=&quot;synType&quot;&gt;MethodOverride&lt;/span&gt;
+  &lt;span class=&quot;synType&quot;&gt;ALLOWED_METHODS&lt;/span&gt;=&lt;span class=&quot;synSpecial&quot;&gt;%w[&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;POST GET&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;synPreProc&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;method_override&lt;/span&gt;(env)
+    req = &lt;span class=&quot;synType&quot;&gt;Rack&lt;/span&gt;::&lt;span class=&quot;synType&quot;&gt;Request&lt;/span&gt;.new(env)
+    method = req.params[&lt;span class=&quot;synType&quot;&gt;METHOD_OVERRIDE_PARAM_KEY&lt;/span&gt;] || env[&lt;span class=&quot;synType&quot;&gt;HTTP_METHOD_OVERRIDE_HEADER&lt;/span&gt;]
+    method.to_s.upcase
+  &lt;span class=&quot;synPreProc&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;synPreProc&quot;&gt;end&lt;/span&gt;
+
+enable &lt;span class=&quot;synConstant&quot;&gt;:method_override&lt;/span&gt;
+
+put &lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;/hoge&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;&#39;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;synComment&quot;&gt;# do awesome things&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;htmlの方で↓のように &lt;code&gt;a&lt;/code&gt; タグを書きます。&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-html&quot; data-lang=&quot;html&quot; data-unlink&gt;&lt;span class=&quot;synIdentifier&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;synIdentifier&quot;&gt; &lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;href&lt;/span&gt;&lt;span class=&quot;synIdentifier&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;synConstant&quot;&gt;&#39;/hoge?_method=PUT&amp;amp;hoge=fuga&#39;&lt;/span&gt;&lt;span class=&quot;synIdentifier&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;synUnderlined&quot;&gt;PUTを投げる&lt;/span&gt;&lt;span class=&quot;synIdentifier&quot;&gt;&amp;lt;/&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;synIdentifier&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;このリンクをクリックすると、&lt;code&gt;hoge=fuga&lt;/code&gt;という内容のPUTリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トが飛びます。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt; 注意 &lt;/strong&gt; ：クローラがやってくるとPOST/PUT/DELETEリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トが飛びまくります。クローラがやってくるWebアプリケーションでこれをやるのは絶対にやめたほうが良いでしょう。&lt;/p&gt;
+
+&lt;h3&gt;解説&lt;/h3&gt;
+
+&lt;p&gt;&lt;code&gt;enable :method_override&lt;/code&gt; によってRack::MethodOverride&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%DF%A5%C9%A5%EB%A5%A6%A5%A7%A5%A2&quot;&gt;ミドルウェア&lt;/a&gt;を有効にし、その挙動を変えています。&lt;/p&gt;
+
+&lt;p&gt;以下でこれを説明します。&lt;/p&gt;
+
+&lt;h4&gt;Rack::MethodOverride とはなにか&lt;/h4&gt;
+
+&lt;p&gt;Rack::MethodOverrideとは、 リク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トに含まれる &lt;code&gt;_method&lt;/code&gt;というパラメータを読み取って、HTTPのmethodを書き換えてくれるRack middlewareです。
+例えば &lt;code&gt;_method=PUT&lt;/code&gt; という値をリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トに入れると、PUTリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トとして処理されるわけです。&lt;/p&gt;
+
+&lt;p&gt;しかし、Rack::MethodOverrideが「method書き換え」をしてくれるのは、元々のmethodが &lt;strong&gt;POSTの場合だけ&lt;/strong&gt; です。
+従って、GETリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トで&lt;code&gt;_method&lt;/code&gt;パラメータを指定してもmethod書き換えは起こりません。&lt;/p&gt;
+
+&lt;p&gt;また、 &lt;code&gt;_method&lt;/code&gt; という値はPOSTパラメータに入っている必要があります。
+このため、Query Stringに &lt;code&gt;_method=PUT&lt;/code&gt; と書いてリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トを投げてもPUTリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トにならないというわけです。&lt;/p&gt;
+
+&lt;h4&gt;Rack::MethodOverride の挙動を変更する&lt;/h4&gt;
+
+&lt;p&gt;では、目的であるところの「 &lt;code&gt;a&lt;/code&gt; タグがクリックされたときに POST/PUT/DELETE のリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トを投げる」を実現するためには、 Rack::MethodOverrideの挙動をどのように変更すれば良いでしょうか。&lt;/p&gt;
+
+&lt;p&gt;これは簡単で、&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;GETリク&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B9&quot;&gt;エス&lt;/a&gt;トについても「method書き換え」をするようにする&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;_method&lt;/code&gt; パラメータをQuery Stringからも読み取るようにする&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;の2点について変更すれば良いわけです。&lt;/p&gt;
+
+&lt;p&gt;前者に関しては、&lt;code&gt;Rack::MethodOverride::ALLOWED_METHODS&lt;/code&gt; の値を &lt;code&gt;%w[POST]&lt;/code&gt; から &lt;code&gt;%w[POST GET]&lt;/code&gt; に変更してやれば良いです。&lt;/p&gt;
+
+&lt;p&gt;また、後者に関しては、&lt;code&gt;Rack::MethodOverride#method_override&lt;/code&gt; をオーバーライドして、↓のように&lt;sup id=&quot;fnref:1&quot;&gt;&lt;a href=&quot;#fn:1&quot; rel=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; &lt;code&gt;req.params&lt;/code&gt;&lt;sup id=&quot;fnref:2&quot;&gt;&lt;a href=&quot;#fn:2&quot; rel=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;/sup&gt; から &lt;code&gt;_method&lt;/code&gt; パラメータを取得するようにすれば良いです。&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-ruby&quot; data-lang=&quot;ruby&quot; data-unlink&gt;&lt;span class=&quot;synComment&quot;&gt;# before&lt;/span&gt;
+method = req.POST[&lt;span class=&quot;synType&quot;&gt;METHOD_OVERRIDE_PARAM_KEY&lt;/span&gt;] || env[&lt;span class=&quot;synType&quot;&gt;HTTP_METHOD_OVERRIDE_HEADER&lt;/span&gt;]
+
+&lt;span class=&quot;synComment&quot;&gt;# afrer&lt;/span&gt;
+method = req.params[&lt;span class=&quot;synType&quot;&gt;METHOD_OVERRIDE_PARAM_KEY&lt;/span&gt;] || env[&lt;span class=&quot;synType&quot;&gt;HTTP_METHOD_OVERRIDE_HEADER&lt;/span&gt;]
+&lt;/pre&gt;
+
+
+&lt;h3&gt;参考&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/rightgo09_ruby/20130830/p1&quot;&gt;Rack::MethodOverride&amp;#x3092;&amp;#x5C11;&amp;#x3057;&amp;#x3044;&amp;#x3058;&amp;#x3063;&amp;#x305F;&amp;#x8A71; - &amp;#x3010;&amp;#x65E7;&amp;#x3011;Perler&amp;#x306E;Ruby&amp;#x65E5;&amp;#x8A18;-&amp;gt;&amp;#x306F;&amp;#x3066;&amp;#x306A;&amp;#x30D6;&amp;#x30ED;&amp;#x30B0;&amp;#x306B;&amp;#x79FB;&amp;#x884C;&amp;#x3057;&amp;#x307E;&amp;#x3057;&amp;#x305F;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.rubydoc.info/gems/rack/Rack/MethodOverride&quot;&gt;Class: Rack::MethodOverride &amp;mdash; Documentation for rack (2.0.5)&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/B07BDPS9VJ/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51njUObfppL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;はじめてのRuby Sinatra入門: 軽量RubyフレームワークSinatraとPaizaCloudを使って10分でWebサービスを作る&quot; title=&quot;はじめてのRuby Sinatra入門: 軽量RubyフレームワークSinatraとPaizaCloudを使って10分でWebサービスを作る&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/B07BDPS9VJ/genya040704-22 /&quot;&gt;はじめてのRuby Sinatra入門: 軽量RubyフレームワークSinatraとPaizaCloudを使って10分でWebサービスを作る&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; 吉岡恒夫&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2018/03/11&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Kindle&quot;&gt;Kindle&lt;/a&gt;版&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/B07BDPS9VJ/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログを見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4873117437/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/5102wwx0VzL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;メタプログラミングRuby 第2版&quot; title=&quot;メタプログラミングRuby 第2版&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4873117437/genya040704-22 /&quot;&gt;メタプログラミングRuby 第2版&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; Paolo Perrotta,&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B3%D1%C0%AC%C5%B5&quot;&gt;角征典&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AA%A5%E9%A5%A4%A5%EA%A1%BC%A5%B8%A5%E3%A5%D1%A5%F3&quot;&gt;オライリージャパン&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2015/10/10&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; 大型本&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/4873117437/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログ (3件) を見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+&lt;div class=&quot;footnotes&quot;&gt;
+&lt;hr/&gt;
+&lt;ol&gt;
+&lt;li id=&quot;fn:1&quot;&gt;
+&lt;p&gt;実際のコードはエラー処理が入っており、もう少し複雑である(&lt;a href=&quot;https://github.com/rack/rack/blob/bfd4c155a9ba2fb1fcee8daab433fbdef582cce2/lib/rack/method_override.rb#L27&quot;&gt;https://github.com/rack/rack/blob/bfd4c155a9ba2fb1fcee8daab433fbdef582cce2/lib/rack/method_override.rb#L27&lt;/a&gt;)&lt;a href=&quot;#fnref:1&quot; rev=&quot;footnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li id=&quot;fn:2&quot;&gt;
+&lt;p&gt;&lt;code&gt;req.params&lt;/code&gt; はQuery Stringのパラメータとrequest bodyのパラメータが合成されたもの&lt;a href=&quot;#fnref:2&quot; rev=&quot;footnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+
+</content>        
+        <category term="Ruby" label="Ruby" />
+        
+        <category term="Sinatra" label="Sinatra" />
+        
+        <link rel="enclosure" href="https://images-fe.ssl-images-amazon.com/images/I/51njUObfppL._SL160_.jpg" type="image/jpeg" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>職人じゃないけどAAがしたい！</title>
+        <link href="http://dawn.hateblo.jp/entry/2018/02/03/200552"/>
+        <id>hatenablog://entry/8599973812343437627</id>
+        <published>2018-02-03T20:05:52+09:00</published>
+        <updated>2018-05-30T21:15:13+09:00</updated>        <summary type="html">作ったもの： https://image2aa.herokuapp.com/ AA(アスキーアート)とは AA(アスキーアート)というのは、上の画像のように文字で書かれた絵のことです。一般には「AA職人」が職人芸で作ります。 元々は画像が貼れない2chで絵を表現するための手段だったと思われますが、近年はフォントの違いによって絵が崩れるのを防ぐためにAAの画像を貼るまとめブログなどもあるようです。 アスキーアートを自動で生成したい！ AA作成には特殊な技術が必要なので、一般人はAAを作れません。 僕だって好きなキャラクターのAAを作りたいのに... AAを画像から生成できればいいのに... それ…</summary>
+        <content type="html">&lt;p&gt;作ったもの：&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://image2aa.herokuapp.com/&quot;&gt;https://image2aa.herokuapp.com/&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1&gt;AA(&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%B9%A5%AD%A1%BC%A5%A2%A1%BC%A5%C8&quot;&gt;アスキーアート&lt;/a&gt;)とは&lt;/h1&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://kaomojich.com/wp-content/uploads/yaruo/yaruo_03.gif&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;http://kaomojich.com/wp-content/uploads/yaruo/yaruo_03.gif&quot; class=&quot;http-image&quot; alt=&quot;http://kaomojich.com/wp-content/uploads/yaruo/yaruo_03.gif&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;AA(&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%B9%A5%AD%A1%BC%A5%A2%A1%BC%A5%C8&quot;&gt;アスキーアート&lt;/a&gt;)というのは、上の画像のように文字で書かれた絵のことです。一般には「AA職人」が職人芸で作ります。&lt;/p&gt;
+
+&lt;p&gt;元々は画像が貼れない&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/2ch&quot;&gt;2ch&lt;/a&gt;で絵を表現するための手段だったと思われますが、近年はフォントの違いによって絵が崩れるのを防ぐために&lt;b&gt;AAの画像&lt;/b&gt;を貼るまとめブログなどもあるようです。&lt;/p&gt;
+
+&lt;h1&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%B9%A5%AD%A1%BC%A5%A2%A1%BC%A5%C8&quot;&gt;アスキーアート&lt;/a&gt;を自動で生成したい！&lt;/h1&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20180203/20180203174748.png&quot; alt=&quot;f:id:threetea0407:20180203174748p:plain:w400&quot; title=&quot;f:id:threetea0407:20180203174748p:plain:w400&quot; class=&quot;hatena-fotolife&quot; style=&quot;width:400px&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;AA作成には特殊な技術が必要なので、一般人はAAを作れません。&lt;/p&gt;
+
+&lt;p&gt;僕だって好きなキャラクターのAAを作りたいのに...&lt;/p&gt;
+
+&lt;p&gt;AAを&lt;b&gt;画像から生成&lt;/b&gt;できればいいのに...&lt;/p&gt;
+
+&lt;p&gt;&lt;span style=&quot;font-size: 200%&quot;&gt;それRustでできるよ&lt;/span&gt;&lt;/p&gt;
+
+&lt;h1&gt;画像からAAを自動生成するWebアプリ&lt;/h1&gt;
+
+&lt;h2&gt;デモ&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://image2aa.herokuapp.com/&quot;&gt;画像からAAを自動生成するWebアプリ&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20180203/20180203194043.gif&quot; alt=&quot;f:id:threetea0407:20180203194043g:plain&quot; title=&quot;f:id:threetea0407:20180203194043g:plain&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;この&lt;a href=&quot;https://image2aa.herokuapp.com/&quot;&gt;Webアプリ&lt;/a&gt;は&lt;a href=&quot;https://www.rust-lang.org/ja-JP/&quot;&gt;Rust言語&lt;/a&gt;で作成されています💪&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/genya0407/image2aa-web&quot;&gt;GitHub - genya0407/image2aa-web&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/genya0407/image2aa&quot;&gt;GitHub - genya0407/image2aa&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;どうやって実現しているのか&lt;/h1&gt;
+
+&lt;p&gt;以下の3段階の処理を行ないます。&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;線画を抽出する&lt;/li&gt;
+&lt;li&gt;画像を分割する&lt;/li&gt;
+&lt;li&gt;部分画像ごとに文字を割り当てる&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;h2&gt;1. 線画を抽出する&lt;/h2&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20180203/20180203180347.png&quot; alt=&quot;f:id:threetea0407:20180203180347p:plain&quot; title=&quot;f:id:threetea0407:20180203180347p:plain&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;まずは線画を抽出します。&lt;/p&gt;
+
+&lt;p&gt;線画を抽出するには、以下の2段階の処理を行います。&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;ソーベルフィルタをかける&lt;/li&gt;
+&lt;li&gt;2値化する&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;h3&gt;ソーベルフィルタ&lt;/h3&gt;
+
+&lt;p&gt;↓こういう畳込みフィルタを掛けます。&lt;/p&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20180203/20180203180738.png&quot; alt=&quot;f:id:threetea0407:20180203180738p:plain:w200&quot; title=&quot;f:id:threetea0407:20180203180738p:plain:w200&quot; class=&quot;hatena-fotolife&quot; style=&quot;width:200px&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;span style=&quot;font-size: 80%&quot;&gt;
+  &lt;a href=&quot;http://ipr20.cs.ehime-u.ac.jp/column/gazo_syori/chapter5.html&quot;&gt;http://ipr20.cs.ehime-u.ac.jp/column/gazo_syori/chapter5.html&lt;/a&gt; より引用
+&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;これをすると「周囲との差が大きい&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;」は値が大きくなり、「周囲との差が小さい&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;」は値が小さくなります。&lt;/p&gt;
+
+&lt;h3&gt;2値化&lt;/h3&gt;
+
+&lt;p&gt;画像において「線」は「周囲との差が大きい&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;」の集合です。
+なので、ソーベルフィルタの結果に対して「ある値より大きい&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;は白色、ある値より小さい&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;は黒色」というように2値化すると、線画が生成されます。&lt;/p&gt;
+
+&lt;h2&gt;2. 画像を分割する&lt;/h2&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20180203/20180203183433.png&quot; alt=&quot;f:id:threetea0407:20180203183433p:plain&quot; title=&quot;f:id:threetea0407:20180203183433p:plain&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;図のように、線画を適当な大きさのブロックに分割します。&lt;/p&gt;
+
+&lt;h2&gt;3. 文字を割り当てる&lt;/h2&gt;
+
+&lt;p&gt;各ブロックに似た文字を割り当てることで、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%B9%A5%AD%A1%BC%A5%A2%A1%BC%A5%C8&quot;&gt;アスキーアート&lt;/a&gt;を得ることができます。
+上図の例では「縦棒の画像」を「｜」に割り当てています。&lt;/p&gt;
+
+&lt;p&gt;ここで問題になるのは&lt;b&gt;各ブロックに似た文字とはなんぞや？&lt;/b&gt;ということです。&lt;/p&gt;
+
+&lt;h3&gt;「似ている」とはどういうことか&lt;/h3&gt;
+
+&lt;p&gt;画像と文字が「似ている」とはどういうことでしょうか？&lt;/p&gt;
+
+&lt;p&gt;いろいろな方法で「似ている度合い」を計算することはできるでしょうが、ここでは「直線の傾き」に着目します。
+つまり、「画像の直線の傾き」と「文字の直線の傾き」を比較して、それらが近い時に「画像と文字が似ている」とします。&lt;/p&gt;
+
+&lt;p&gt;上の画像の例だと、「縦棒の直線の傾き」と「｜の傾き」が近いため、「｜」を割り当てるということです。&lt;/p&gt;
+
+&lt;h3&gt;直線の傾きをどう求めるのか？&lt;/h3&gt;
+
+&lt;p&gt;では、直線の傾きはどのように求めればよいのでしょうか？&lt;/p&gt;
+
+&lt;p&gt;これについてもいろいろな手法があるでしょうが、ここでは&lt;b&gt;ハフ変換&lt;/b&gt;というのを使います。
+ハフ変換を使うと、画像内に含まれる直線の傾きと、その直線の原点からの距離を求めることができます。&lt;/p&gt;
+
+&lt;p&gt;あとは、画像の直線の傾きと文字の直線の傾きを比較して、近いものを割り当てれば&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%B9%A5%AD%A1%BC%A5%A2%A1%BC%A5%C8&quot;&gt;アスキーアート&lt;/a&gt;が得られます。&lt;/p&gt;
+
+&lt;h1&gt;完成 🙌&lt;/h1&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20180203/20180203185136.png&quot; alt=&quot;f:id:threetea0407:20180203185136p:plain&quot; title=&quot;f:id:threetea0407:20180203185136p:plain&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;このように、&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;線画を抽出する&lt;/li&gt;
+&lt;li&gt;画像を分割する&lt;/li&gt;
+&lt;li&gt;部分画像ごとに文字を割り当てる&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;の3段階の処理を行なうことで、画像から&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%B9%A5%AD%A1%BC%A5%A2%A1%BC%A5%C8&quot;&gt;アスキーアート&lt;/a&gt;を生成することができます。&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/1491927283/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51cdXICI6nL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;Programming Rust: Fast, Safe Systems Development&quot; title=&quot;Programming Rust: Fast, Safe Systems Development&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/1491927283/genya040704-22 /&quot;&gt;Programming Rust: Fast, Safe Systems Development&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; Jim Blandy,Jason Orendorff&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; Oreilly &amp; Associates Inc&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2017/12/21&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; ペーパーバック&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/1491927283/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログを見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4873118379/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51PnbcCkunL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;詳解 OpenCV 3 ―コンピュータビジョンライブラリを使った画像処理・認識&quot; title=&quot;詳解 OpenCV 3 ―コンピュータビジョンライブラリを使った画像処理・認識&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4873118379/genya040704-22 /&quot;&gt;詳解 OpenCV 3 ―コンピュータビジョンライブラリを使った画像処理・認識&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; Gary Bradski,Adrian Kaehler,松田晃一,小沼千絵,永田雅人,花形理&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AA%A5%E9%A5%A4%A5%EA%A1%BC%A5%B8%A5%E3%A5%D1%A5%F3&quot;&gt;オライリージャパン&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2018/05/26&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; 単行本（ソフトカバー）&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/4873118379/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログを見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+</content>        
+        <category term="Rust" label="Rust" />
+        
+        <category term="画像処理" label="画像処理" />
+        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <link rel="enclosure" href="http://kaomojich.com/wp-content/uploads/yaruo/yaruo_03.gif" type="image/gif" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>「熊野寮生だけど質問ある？」</title>
+        <link href="http://dawn.hateblo.jp/entry/qfkd"/>
+        <id>hatenablog://entry/8599973812324300253</id>
+        <published>2017-12-07T00:00:00+09:00</published>
+        <updated>2017-12-12T11:12:51+09:00</updated>        <summary type="html">CAMPHOR- Advent Calendar 2017 の 7日目 の記事です。 CAMPHOR-運営メンバーの @genya0407 です。 熊野寮ネタばかりで恐縮ですが、「熊野寮生だけど質問ある？」というWebサービスを作った話をします。 「熊野寮生だけど質問ある？」とは？ 「熊野寮生だけど質問ある？」は、熊野寮生に匿名で質問ができるWebサービスです。 質問を投げると熊野寮生から回答がつきます。 熊野寮祭の企画の一つとして作りました。 なんでこの企画をやろうと思ったの？ Twitterでエゴサかける度に、みんな熊野寮のこと誤解してるんだなぁと感じます。 特にガサ入れ直後とかはひどくて…</summary>
+        <content type="html">&lt;p&gt;&lt;a href=&quot;https://advent.camph.net/&quot;&gt;CAMPHOR- Advent Calendar 2017&lt;/a&gt; の 7日目 の記事です。&lt;/p&gt;
+
+&lt;p&gt;CAMPHOR-運営メンバーの &lt;a href=&quot;https://twitter.com/?lang=ja&quot;&gt;@genya0407&lt;/a&gt; です。&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;ネタばかりで恐縮ですが、「&lt;a href=&quot;https://qfk.herokuapp.com/&quot;&gt;&amp;#x718A;&amp;#x91CE;&amp;#x5BEE;&amp;#x751F;&amp;#x3060;&amp;#x3051;&amp;#x3069;&amp;#x8CEA;&amp;#x554F;&amp;#x3042;&amp;#x308B;&amp;#xFF1F;&lt;/a&gt;」という&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Web%A5%B5%A1%BC%A5%D3%A5%B9&quot;&gt;Webサービス&lt;/a&gt;を作った話をします。&lt;/p&gt;
+
+&lt;h1&gt;「&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生だけど質問ある？」とは？&lt;/h1&gt;
+
+&lt;p&gt;「&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生だけど質問ある？」は、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生に匿名で質問ができる&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Web%A5%B5%A1%BC%A5%D3%A5%B9&quot;&gt;Webサービス&lt;/a&gt;です。
+質問を投げると&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生から回答がつきます。&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;祭の企画の一つとして作りました。&lt;/p&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171206/20171206233101.png&quot; alt=&quot;f:id:threetea0407:20171206233101p:plain:w600&quot; title=&quot;f:id:threetea0407:20171206233101p:plain:w600&quot; class=&quot;hatena-fotolife&quot; style=&quot;width:600px&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;h1&gt;なんでこの企画をやろうと思ったの？&lt;/h1&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Twitter&quot;&gt;Twitter&lt;/a&gt;で&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A8%A5%B4%A5%B5&quot;&gt;エゴサ&lt;/a&gt;かける度に、みんな&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;のこと誤解してるんだなぁと感じます。
+特にガサ入れ直後とかはひどくて、目を覆いたくなるようなツイートもたくさんあります。&lt;/p&gt;
+
+&lt;p&gt;これは、テレビで流れるのはガサの報道か「変人の巣窟」という観点のバラエティ番組ばかりで、そういう情報しか目に触れることがないことが大きな要因だと思います。
+さらに、インターネット上にある情報も「廃墟」とか「やばい場所」とか、あるいは「過激派の巣窟」という一面的な切り口でしか&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;を語っていません。
+こうした状況では、世間の人々が&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;に対して偏見を持つのも仕方ないと思います。&lt;/p&gt;
+
+&lt;p&gt;じゃあ、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;公式で情報発信をすればいいじゃないかという話になりますが、これは結構難しいです。
+というのも、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;自治会として情報を発信するためには寮全体で合意を取る必要があるからです。
+これはハードルがなかなか高いですし、単純に時間がかかります。&lt;/p&gt;
+
+&lt;p&gt;そこで、「実際のところ○○ってどうなん？」みたいなことを「&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;自治会」ではなく「&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生個人」に聞くことができたら、毎度寮全体で合意を取る必要もなく、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;に関する誤解も解けていくのではないかという気持ちがあり、このサービスを作成しました。&lt;/p&gt;
+
+&lt;h1&gt;実際公開してみてどうなん？&lt;/h1&gt;
+
+&lt;p&gt;想定していた使い方とはちょっと違う使われ方をしていると感じます。&lt;/p&gt;
+
+&lt;p&gt;どういうことかというと、質問してくる人が、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;に全く関わりのない人というよりは、例えば京大生だったり、京都周辺に住んでいる人が多いということです。
+つまり、ある程度&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;についての知識がある人が質問してきているという感触があります。&lt;/p&gt;
+
+&lt;p&gt;これは、そもそも&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;に関わりのない人に対してこのサービスが知られていないということが、大きな原因としてあると考えられます。
+現状「&lt;a href=&quot;https://qfk.herokuapp.com/&quot;&gt;&amp;#x718A;&amp;#x91CE;&amp;#x5BEE;&amp;#x751F;&amp;#x3060;&amp;#x3051;&amp;#x3069;&amp;#x8CEA;&amp;#x554F;&amp;#x3042;&amp;#x308B;&amp;#xFF1F;&lt;/a&gt;」への&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%CE%AE%C6%FE&quot;&gt;流入&lt;/a&gt;経路は、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生のツイートと、&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event124&quot;&gt;熊野寮祭の企画一覧ページ&lt;/a&gt;の２箇所しかありません。
+これでは&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生の友人や、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;そのものに興味がある人にしかリーチすることができず、当初の目的とは対象がズレてしまっています。&lt;/p&gt;
+
+&lt;p&gt;サービスを作るときには、ただ単にソフトウェアを開発するだけではなく、ターゲットにリーチするための努力も必要だという知見が得られました。&lt;/p&gt;
+
+&lt;h1&gt;今後はどうするの？&lt;/h1&gt;
+
+&lt;p&gt;当初は寮祭終了とともにクローズするつもりで始めたのですが、もっと続けたほうがいいという声もあり、ひとまず継続しようと思っています。サービス自体はまだ完成していないと思っているので、ぼちぼち改善していきます。&lt;/p&gt;
+
+&lt;p&gt;検索とかお気に入りとかカテゴリ分けとか回答者ごとの並び替えとかやっていきたいし、デザインも改善していきたい。&lt;/p&gt;
+
+&lt;p&gt;12/12 追記：回答者内で議論した結果、一旦質問の募集を打ち切ることになりました。既存の質問や回答は引き続き公開します。入試の時期や春先、ガサが入ったときなどに再度質問を受ける期間を設けようと思います。&lt;/p&gt;
+</content>        
+        <category term="熊野寮" label="熊野寮" />
+        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <link rel="enclosure" href="https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171206/20171206233101.png" type="image/png" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title> 熊野寮でコードを書いて感謝された話</title>
+        <link href="http://dawn.hateblo.jp/entry/write-code-kumano-dormitory"/>
+        <id>hatenablog://entry/8599973812322747172</id>
+        <published>2017-12-02T00:00:00+09:00</published>
+        <updated>2018-05-30T21:30:46+09:00</updated>        <summary type="html">CAMPHOR- Advent Calendar 2017 の 2日目 の記事です。 CAMPHOR-運営メンバーの @genya0407 です。 熊野寮でコードを書いて感謝された話をします。 熊野寮 僕は京都大学の自治寮である熊野寮に住んでいます。 ガサが来たり過激派が住んでたりしますが、基本的には自由で楽しいところです。 カーシェアリング 熊野寮にはカーシェアリングというサービスがあります*1。 これは、自動車を共有して安く利用しようというサービスです。会員登録をし、年会費を払い、乗った分だけ追加で料金を払います。 廉価に車を使えるので僕も利用しているのですが、割と昔からあるサービスという…</summary>
+        <content type="html">&lt;p&gt;&lt;a href=&quot;https://advent.camph.net/&quot;&gt;CAMPHOR- Advent Calendar 2017&lt;/a&gt; の 2日目 の記事です。&lt;/p&gt;
+
+&lt;p&gt;CAMPHOR-運営メンバーの &lt;a href=&quot;https://twitter.com/genya0407&quot;&gt;@genya0407&lt;/a&gt; です。&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;でコードを書いて感謝された話をします。&lt;/p&gt;
+
+&lt;h2&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;僕は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B5%FE%C5%D4%C2%E7%B3%D8&quot;&gt;京都大学&lt;/a&gt;の自治寮である&lt;a href=&quot;https://kumano-ryo.jimdo.com/&quot;&gt;熊野寮&lt;/a&gt;に住んでいます。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://image.jimcdn.com/app/cms/image/transf/dimension=436x10000:format=jpg/path/se413120fb88ca7d2/image/idf343008c3b6950f/version/1479838001/image.jpg&quot; alt=&quot;熊野寮の様子&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;ガサが来たり過激派が住んでたりしますが、基本的には自由で楽しいところです。&lt;/p&gt;
+
+&lt;h2&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AB%A1%BC%A5%B7%A5%A7%A5%A2%A5%EA%A5%F3%A5%B0&quot;&gt;カーシェアリング&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;には&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AB%A1%BC%A5%B7%A5%A7%A5%A2%A5%EA%A5%F3%A5%B0&quot;&gt;カーシェアリング&lt;/a&gt;というサービスがあります&lt;a href=&quot;#f-1f76bffc&quot; name=&quot;fn-1f76bffc&quot; title=&quot;自治会公式でやっているわけではなく個人がサービスを提供している&quot;&gt;*1&lt;/a&gt;。
+これは、自動車を共有して安く利用しようというサービスです。会員登録をし、年会費を払い、乗った分だけ追加で料金を払います。&lt;/p&gt;
+
+&lt;p&gt;廉価に車を使えるので僕も利用しているのですが、割と昔からあるサービスということもあって理不尽な手作業を強いられることが多く辟易していました。&lt;/p&gt;
+
+&lt;h2&gt;理不尽な手作業&lt;/h2&gt;
+
+&lt;p&gt;理不尽な手作業とは何かというと、それは乗車の手続きのことです。&lt;/p&gt;
+
+&lt;p&gt;車に乗る時の手続きをまとめると、&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;乗ろうとしている車が予約されていないか確認するために、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%E1%A1%BC%A5%EA%A5%F3%A5%B0%A5%EA%A5%B9%A5%C8&quot;&gt;メーリングリスト&lt;/a&gt;を検索する&lt;/li&gt;
+&lt;li&gt;今から車に乗る旨のメッセージを&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%E1%A1%BC%A5%EA%A5%F3%A5%B0%A5%EA%A5%B9%A5%C8&quot;&gt;メーリングリスト&lt;/a&gt;に流す&lt;/li&gt;
+&lt;li&gt;乗車時の走行距離メーターの値をノートに書く&lt;/li&gt;
+&lt;li&gt;降車時の走行距離メーターの値をノートに書く&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;のようになります。クッソ面倒ですね。最悪のユーザー体験です。&lt;/p&gt;
+
+&lt;h2&gt;なんでこんなにめんどい手続きが必要なのか&lt;/h2&gt;
+
+&lt;p&gt;なんでこういう煩雑な手続きが必要なのかというと、利用料金を計算するためです。「使った分だけお金を払う」を実現するためには、「どれだけ車に乗ったのか」ということを記録しなければなりません。&lt;/p&gt;
+
+&lt;p&gt;例えば、タイムズがやっている&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AB%A1%BC%A5%B7%A5%A7%A5%A2%A5%EA%A5%F3%A5%B0&quot;&gt;カーシェアリング&lt;/a&gt;サービスの場合は、車の鍵を開けてから締めるまでの時間が計測されており、それを元に料金を自動で算出します。
+そのため、ユーザーは特別な作業をする必要はありません。車に乗って降りるだけで料金が自動で計算されます。&lt;/p&gt;
+
+&lt;p&gt;一方&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;の場合は、そんなオシャレなシステムを搭載するお金も技術も無いので、上記のような煩雑な手続きが発生していました。&lt;/p&gt;
+
+&lt;h2&gt;Webアプリの導入&lt;/h2&gt;
+
+&lt;p&gt;こうした煩雑な手続きをなくすために、&lt;a href=&quot;https://github.com/genya0407/sharecar-rails&quot;&gt;Webアプリ&lt;/a&gt;を作り、導入＆移行しました。
+ユーザーは、メーターの値と帰宅時刻を入力するだけで車に乗れます&lt;a href=&quot;#f-bf6421b7&quot; name=&quot;fn-bf6421b7&quot; title=&quot;理想的にはタイムズのシステムみたいに鍵開けたときと閉めたときのメーターの値を記録するようにしたいけど、現状鍵からユーザーを特定できる作りにはなってないので難しい。
+&quot;&gt;*2&lt;/a&gt;。
+その上、予約中に乗ろうとすると警告されるので、予約をいちいち確認する必要もありません。&lt;/p&gt;
+
+&lt;p&gt;また、以前のやり方だと、使用料金を算出するために半年に一度ノートに書いてある走行距離を&lt;b&gt;秘伝の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Excel&quot;&gt;Excel&lt;/a&gt;シートに手入力&lt;/b&gt;してマクロを走らせる必要がありました。この手入力という作業が本当にひどくて、一度やらされたときは6時間ぐらいかかって本当に発狂するかと思いました。&lt;/p&gt;
+
+&lt;p&gt;Webアプリに移行したことでこの手入力という地獄のタスクが無くなり、僕がバッチを回せば使用料金が算出されるようになりました。最高のユーザー体験です。&lt;/p&gt;
+
+&lt;h2&gt;非ITコミュニティでプログラムを書くこと&lt;/h2&gt;
+
+&lt;p&gt;このWebアプリはみんな大好き&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Ruby%20on%20Rails&quot;&gt;Ruby on Rails&lt;/a&gt;で作成されています。
+フロントエンドも普通にHTMLを吐き出しているだけで、今時のイケてるJS&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D5%A5%EC%A1%BC%A5%E0%A5%EF%A1%BC%A5%AF&quot;&gt;フレームワーク&lt;/a&gt;などは使っていません&lt;a href=&quot;#f-2ada8c88&quot; name=&quot;fn-2ada8c88&quot; title=&quot;materialize.cssというcssフレームワークは使った&quot;&gt;*3&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;こういう雑なWebアプリが作れるだけでも、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;ではものすごく重宝されて褒められます。
+このアプリを作ったときも、「めっちゃ便利！」という反応をいただきました。
+レベルの高いエンジニアの中で切磋琢磨するのも楽しいですが、こういうIT力の低い組織でいろいろやるのも楽しいです。&lt;/p&gt;
+
+&lt;p&gt;みなさんも自分の所属する非IT系コミュニティなどで、自分のIT力を活かしていろいろやってみたら楽しいかもしれませんよ。おすすめです。&lt;/p&gt;
+
+&lt;h2&gt;結論&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;ユーザーの体験は大幅に改善され、みんな快適に&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AB%A1%BC%A5%B7%A5%A7%A5%A2%A5%EA%A5%F3%A5%B0&quot;&gt;カーシェアリング&lt;/a&gt;できるようになりました。めでたい。&lt;/li&gt;
+&lt;li&gt;承認欲求が満たされたい&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D7%A5%ED%A5%B0%A5%E9%A5%DE&quot;&gt;プログラマ&lt;/a&gt;の人はぜひ&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;に入寮しましょう。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4774165166/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51gar5P8bEL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;パーフェクト Ruby on Rails&quot; title=&quot;パーフェクト Ruby on Rails&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4774165166/genya040704-22 /&quot;&gt;パーフェクト Ruby on Rails&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; すがわらまさのり,前島真一,近藤宇智朗,橋立友宏&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B5%BB%BD%D1%C9%BE%CF%C0%BC%D2&quot;&gt;技術評論社&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2014/06/06&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; 大型本&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/4774165166/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログ (8件) を見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4063723224/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51ZF3jyTOsL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;レッド(1) (KCデラックス イブニング)&quot; title=&quot;レッド(1) (KCデラックス イブニング)&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4063723224/genya040704-22 /&quot;&gt;レッド(1) (KCデラックス イブニング)&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%BB%B3%CB%DC%C4%BE%BC%F9&quot;&gt;山本直樹&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B9%D6%C3%CC%BC%D2&quot;&gt;講談社&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2007/09/21&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; コミック&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;購入&lt;/span&gt;: 15人 &lt;span class=&quot;hatena-asin-detail-label&quot;&gt;クリック&lt;/span&gt;: 221回&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/4063723224/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログ (168件) を見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+&lt;div class=&quot;footnote&quot;&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-1f76bffc&quot; name=&quot;f-1f76bffc&quot; class=&quot;footnote-number&quot;&gt;*1&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;自治会公式でやっているわけではなく個人がサービスを提供している&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-bf6421b7&quot; name=&quot;f-bf6421b7&quot; class=&quot;footnote-number&quot;&gt;*2&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;理想的にはタイムズのシステムみたいに鍵開けたときと閉めたときのメーターの値を記録するようにしたいけど、現状鍵からユーザーを特定できる作りにはなってないので難しい。
+&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-2ada8c88&quot; name=&quot;f-2ada8c88&quot; class=&quot;footnote-number&quot;&gt;*3&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;materialize.&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/css&quot;&gt;css&lt;/a&gt;という&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/css&quot;&gt;css&lt;/a&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D5%A5%EC%A1%BC%A5%E0%A5%EF%A1%BC%A5%AF&quot;&gt;フレームワーク&lt;/a&gt;は使った&lt;/span&gt;&lt;/p&gt;
+&lt;/div&gt;</content>        
+        <category term="熊野寮" label="熊野寮" />
+        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <category term="Rails" label="Rails" />
+        
+        <category term="Ruby" label="Ruby" />
+        
+        <link rel="enclosure" href="https://image.jimcdn.com/app/cms/image/transf/dimension=436x10000:format=jpg/path/se413120fb88ca7d2/image/idf343008c3b6950f/version/1479838001/image.jpg" type="image/jpeg" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>寮外の人でも楽しめる熊野寮祭の企画</title>
+        <link href="http://dawn.hateblo.jp/entry/2017/11/28/055018"/>
+        <id>hatenablog://entry/8599973812321739038</id>
+        <published>2017-11-28T05:50:18+09:00</published>
+        <updated>2017-11-28T06:01:46+09:00</updated>        <summary type="html">熊野寮祭において、寮生でなくても楽しめる企画を列挙し、概要を説明します。 熊野寮祭とは 熊野寮祭とは、京都大学の学生自治寮である熊野寮が毎年開催している祭りです。例年11月末〜12月初頭まで開催されます。今年はちょっと長いですが、11月29日〜12月10日の間開催されます。 問題意識 熊野寮祭は、基本的には寮生内輪で楽しむお祭りです。というか、寮生でないと楽しめない企画や、寮外の方が参加することを想定していない企画が混ざっています。 そのため、寮外の方は企画に参加してよいのか悪いのかわからず、結局参加しないという状態になっている気がします。 この記事では、合計100を超える企画の中から「寮外の…</summary>
+        <content type="html">&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;祭において、寮生でなくても楽しめる企画を列挙し、概要を説明します。&lt;/p&gt;
+
+&lt;h1&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;祭とは&lt;/h1&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;祭とは、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B5%FE%C5%D4%C2%E7%B3%D8&quot;&gt;京都大学&lt;/a&gt;の学生自治寮である&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;が毎年開催している祭りです。例年11月末〜12月初頭まで開催されます。今年はちょっと長いですが、11月29日〜12月10日の間開催されます。&lt;/p&gt;
+
+&lt;h1&gt;問題意識&lt;/h1&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;祭は、基本的には寮生内輪で楽しむお祭りです。というか、寮生でないと楽しめない企画や、寮外の方が参加することを想定していない企画が混ざっています。
+そのため、寮外の方は企画に参加してよいのか悪いのかわからず、結局参加しないという状態になっている気がします。&lt;/p&gt;
+
+&lt;p&gt;この記事では、合計100を超える企画の中から「寮外の方も楽しめる企画」「寮外の方が参加することを想定している企画」を主観によりチョイスし、軽く解説します。&lt;/p&gt;
+
+&lt;h1&gt;寮外の方も楽しめる企画一覧&lt;/h1&gt;
+
+&lt;p&gt;以下、企画一覧です。
+ちなみに、すべての企画は&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/&quot;&gt;公式HP&lt;/a&gt;に詳細が載っています。詳しく知りたい方はそちらを参照してください。&lt;/p&gt;
+
+&lt;h2&gt;寮の外でやる企画&lt;/h2&gt;
+
+&lt;h3&gt;時計台占拠&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-11-29.html#event3&quot;&gt;&lt;b&gt;時計台占拠&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B5%FE%C5%D4%C2%E7%B3%D8&quot;&gt;京都大学&lt;/a&gt;のシンボル「時計台」で何かが起こる。恒例企画。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/senkyo.jpg&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/senkyo.jpg&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/senkyo.jpg&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;四条大運動会&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-03.html#event32&quot;&gt;&lt;b&gt;四条大運動会&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%BB%CD%BE%F2%C4%CC&quot;&gt;四条通&lt;/a&gt;で運動会をする。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1203/shijou.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1203/shijou.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1203/shijou.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;イカダレース&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-02.html#event22&quot;&gt;&lt;b&gt;イカダレース&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;イカダを作って鴨川を下る。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/ikada.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/ikada.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/ikada.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;京都駅大階段グリコ&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-09.html#event84&quot;&gt;&lt;b&gt;京都駅大階段グリコ&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;京都駅の大階段でたむろしているカップルとじゃんけんして、グリコの要領で階段をのぼる。速く登った人が勝ち。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1209/guriko.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1209/guriko.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1209/guriko.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2&gt;飲食&lt;/h2&gt;
+
+&lt;h3&gt;BAR KUMA&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event98&quot;&gt;&lt;b&gt;BAR KUMA&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;寮にバーが出現する。リーズナブルな料金でドリンクを提供する。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/barkuma.jpg&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/barkuma.jpg&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/barkuma.jpg&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;たこ焼き&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event103&quot;&gt;&lt;b&gt;たこ焼き&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;たこ焼きを売る。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/takoyaki.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/takoyaki.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/takoyaki.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;寮祭無限酒&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event117&quot;&gt;&lt;b&gt;寮祭無限酒&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;カンパを払って酒を無限に飲む。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/mugensake.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/mugensake.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/mugensake.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%CA%A5%ED%A5%B0%A5%B2%A1%BC%A5%E0&quot;&gt;アナログゲーム&lt;/a&gt;関連&lt;/h2&gt;
+
+&lt;h3&gt;賞金付きポーカー大会&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-02.html#event21&quot;&gt;&lt;b&gt;賞金付きポーカー大会&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;4日間に渡ってポーカー大会をする。賞金総額10万円。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/poker.jpg&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/poker.jpg&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/poker.jpg&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;麻将皇帝戦&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-07.html#event66&quot;&gt;&lt;b&gt;麻将皇帝戦&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;麻雀大会。例年は80人ぐらい参加する。寮外の方のほうが多い珍しい企画。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1207/masyou.jpg&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1207/masyou.jpg&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1207/masyou.jpg&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;耐久&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AB%A5%BF%A5%F3&quot;&gt;カタン&lt;/a&gt;&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-02.html#event28&quot;&gt;&lt;b&gt;耐久カタン&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;12時間ぐらいぶっつづけで&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AB%A5%BF%A5%F3&quot;&gt;カタン&lt;/a&gt;をやる。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/katan.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/katan.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/katan.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;耐久&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%EC%A5%B8%A5%B9%A5%BF&quot;&gt;レジスタ&lt;/a&gt;ンス・アヴァロン&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-05.html#event51&quot;&gt;&lt;b&gt;耐久レジスタンス・アヴァロン&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;できるだけ長くアヴァロンをプレイし続ける。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/avalon.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/avalon.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/avalon.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/TRPG&quot;&gt;TRPG&lt;/a&gt;小会&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-10.html#event91&quot;&gt;&lt;b&gt;TRPG小会&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/TRPG&quot;&gt;TRPG&lt;/a&gt;をやる。飛び入りOK。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1210/trpg.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1210/trpg.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1210/trpg.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2&gt;例のアレ&lt;/h2&gt;
+
+&lt;h3&gt;鉄扉&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-04.html#event48&quot;&gt;&lt;b&gt;鉄扉&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;の地下にある鉄の扉の部屋で飲み屋を開く。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1204/teppi.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1204/teppi.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1204/teppi.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;野菜販売&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event105&quot;&gt;&lt;b&gt;野菜販売&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;千葉県&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%C0%AE%C5%C4%BB%D4&quot;&gt;成田市&lt;/a&gt;産の野菜を売る&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/yasai.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/yasai.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/permanent/yasai.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B3%B0%BB%B3%B9%B1%B0%EC&quot;&gt;外山恒一&lt;/a&gt;関連の企画&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-11-30.html#event10&quot;&gt;&lt;b&gt;「よいテロリストのための教科書」を大声で読む&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-01.html#event17&quot;&gt;&lt;b&gt;「続・よいテロリストのための教科書」を書く&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/2017-12-02.html#event25&quot;&gt;&lt;b&gt;外山恒一座談会&lt;/b&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/zadankai.png&quot; class=&quot;http-image&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/zadankai.png&quot; class=&quot;http-image&quot; alt=&quot;https://kumano-dormitory.github.io/ryosai2017/base_data/images/1202/zadankai.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B3%B0%BB%B3%B9%B1%B0%EC&quot;&gt;外山恒一&lt;/a&gt;が来ることもあってか、今年はそれに関連した企画がいくつかあります。&lt;/p&gt;
+
+&lt;h2&gt;ネット上で見れる企画&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event124&quot;&gt;&lt;b&gt;熊野寮生だけど質問ある？&lt;/b&gt;&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;生に匿名で質問できるWebアプリ。寮生の有志が匿名で回答する。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/permanent.html#event109&quot;&gt;&lt;b&gt;意識高い熊野寮HP制作&lt;/b&gt;&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;意識高そうな&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%B7%A7%CC%EE%CE%C0&quot;&gt;熊野寮&lt;/a&gt;のHPを作る。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;その他の企画について&lt;/h1&gt;
+
+&lt;p&gt;上に挙げたもの以外にもたくさんの企画があります。興味のある方は、&lt;a href=&quot;https://kumano-dormitory.github.io/ryosai2017/events.html&quot;&gt;企画一覧のページ&lt;/a&gt;をご覧ください。&lt;/p&gt;
+</content>        
+        <category term="熊野寮" label="熊野寮" />
+        
+        <link rel="enclosure" href="https://kumano-dormitory.github.io/ryosai2017/base_data/images/1129/senkyo.jpg" type="image/jpeg" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>PNGを端末に表示するプログラムをRustで書いた</title>
+        <link href="http://dawn.hateblo.jp/entry/2017/10/22/212635"/>
+        <id>hatenablog://entry/8599973812310292343</id>
+        <published>2017-10-22T21:26:35+09:00</published>
+        <updated>2017-10-22T23:22:52+09:00</updated>        <summary type="html">PNGを端末に表示するプログラムを作りました。 github.com 使い方 cargo run /Path/to/Windows_logo.png とすると、👇のように端末に画像が表示されます。透過画像も表示できます。 ちなみに、PNGの画像形式は何パターンかあるのですが、そのすべてに対応してるわけではないので、表示できない画像もあります。あしからず。 メイキング PNGの規格が理解できたら、あとは流れで作れると思うので、PNGの規格を理解しましょう。 PNGの規格はRFCで公開されているので、それを読んでください。 ...というわけにも行かないので、解説記事を読んで下さい 👇 dawn.h…</summary>
+        <content type="html">&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;を端末に表示するプログラムを作りました。&lt;/p&gt;
+
+&lt;p&gt;&lt;iframe src=&quot;https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fgenya0407%2Fpng_print&quot; title=&quot;genya0407/png_print&quot; class=&quot;embed-card embed-webcard&quot; scrolling=&quot;no&quot; frameborder=&quot;0&quot; style=&quot;display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;&quot;&gt;&lt;/iframe&gt;&lt;cite class=&quot;hatena-citation&quot;&gt;&lt;a href=&quot;https://github.com/genya0407/png_print&quot;&gt;github.com&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
+
+&lt;h2&gt;使い方&lt;/h2&gt;
+
+&lt;pre class=&quot;code&quot; data-lang=&quot;&quot; data-unlink&gt;cargo run /Path/to/Windows_logo.png&lt;/pre&gt;
+
+
+&lt;p&gt;とすると、👇のように端末に画像が表示されます。透過画像も表示できます。&lt;/p&gt;
+
+&lt;p&gt;ちなみに、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;の画像形式は何パターンかあるのですが、そのすべてに対応してるわけではないので、表示できない画像もあります。あしからず。&lt;/p&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;a href=&quot;http://f.hatena.ne.jp/threetea0407/20171022173244&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;url&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171022/20171022173244.png&quot; alt=&quot;f:id:threetea0407:20171022173244p:image:w300&quot; title=&quot;f:id:threetea0407:20171022173244p:image:w300&quot; class=&quot;hatena-fotolife&quot; style=&quot;width:300px&quot; itemprop=&quot;image&quot;&gt;&lt;/a&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;h2&gt;メイキング&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;の規格が理解できたら、あとは流れで作れると思うので、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;の規格を理解しましょう。
+&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;の規格は&lt;a href=&quot;https://tools.ietf.org/html/rfc2083&quot;&gt;RFCで公開されている&lt;/a&gt;ので、それを読んでください。&lt;/p&gt;
+
+&lt;p&gt;...というわけにも行かないので、解説記事を読んで下さい 👇&lt;/p&gt;
+
+&lt;p&gt;&lt;iframe src=&quot;https://hatenablog-parts.com/embed?url=http%3A%2F%2Fdawn.hateblo.jp%2Fentry%2F2017%2F10%2F22%2F205417&quot; title=&quot;PNGの規格を簡単に説明する - さんちゃのblog&quot; class=&quot;embed-card embed-blogcard&quot; scrolling=&quot;no&quot; frameborder=&quot;0&quot; style=&quot;display: block; width: 100%; height: 190px; max-width: 500px; margin: 10px 0px;&quot;&gt;&lt;/iframe&gt;&lt;cite class=&quot;hatena-citation&quot;&gt;&lt;a href=&quot;http://dawn.hateblo.jp/entry/2017/10/22/205417&quot;&gt;dawn.hateblo.jp&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
+
+&lt;p&gt;とはいえ、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/RFC&quot;&gt;RFC&lt;/a&gt;の英語は簡単だし読みやすいので、読むのもそこまで大変ではないと思います。&lt;/p&gt;
+
+&lt;h2&gt;なぜやったのか&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/mixi&quot;&gt;mixi&lt;/a&gt;の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A4%A5%F3%A5%BF%A1%BC%A5%F3&quot;&gt;インターン&lt;/a&gt;期間中に開催された「&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A4%A5%F3%A5%BF%A1%BC%A5%F3&quot;&gt;インターン&lt;/a&gt;生vs社員LT大会」で、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A4%A5%F3%A5%BF%A1%BC%A5%F3&quot;&gt;インターン&lt;/a&gt;生の人がzip圧縮に関する発表をしていました。その人は、zipの規格を読んでそれを元にzip圧縮するソフトを&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/C%2B%2B&quot;&gt;C++&lt;/a&gt;で実装したそうです。&lt;br /&gt;
+なんでわざわざ&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/C%2B%2B&quot;&gt;C++&lt;/a&gt;でやったんですか？とその人に聞いたところ、バイト列の扱いがLLなどに比べてやりやすいからだという返事が返ってきました。&lt;/p&gt;
+
+&lt;p&gt;なるほどな〜やっぱり人間は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/C%2B%2B&quot;&gt;C++&lt;/a&gt;を書かなきゃいけないんやな〜ってその時は思ったんですが、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A4%A5%F3%A5%BF%A1%BC%A5%F3&quot;&gt;インターン&lt;/a&gt;が終わるぐらいのときに、Rustはそういう低レイヤーなものを書くのに向いているのではないか、と思うようになりました。&lt;/p&gt;
+
+&lt;p&gt;そういうお気持ちだったときに、「ディジタル情報処理」という授業の先生が「ディジタル情報処理に関係するプログラム書いたら単位出すで」と言っていたので、いっちょうやったるかという機運が高まり、プログラムが作成されました&lt;a href=&quot;#f-2abd379d&quot; name=&quot;fn-2abd379d&quot; title=&quot;ちなみにこのプログラムを先生に見せたら「ディジタル情報処理に関係してるかっていうと微妙だねぇ」という返答が返ってきました。先生的には離散フーリエ変換とかしてほしかったみたいです。&quot;&gt;*1&lt;/a&gt;&lt;a href=&quot;#f-f7139cfe&quot; name=&quot;fn-f7139cfe&quot; title=&quot;エッジの検出してAAに変換するとかすれば、ディジタル情報処理とみなせると言われました。次の課題はこれです。&quot;&gt;*2&lt;/a&gt;。&lt;/p&gt;
+
+&lt;h2&gt;Rustに関する感想&lt;/h2&gt;
+
+&lt;h3&gt;バイト列の取り扱いはいい感じだった&lt;/h3&gt;
+
+&lt;p&gt;結論から言うと、Rustでバイト列を取り扱うのは結構やりやすいです&lt;a href=&quot;#f-b4746aaf&quot; name=&quot;fn-b4746aaf&quot; title=&quot;僕はバイト列をゴニョゴニョするようなことは普段やらないし、ましてやC++なんて書いたこともないので、あくまで「LLに比べて」やりやすいということです&quot;&gt;*3&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;例えば、&lt;code&gt;u8&lt;/code&gt;の配列から4つづつ読み出して、&lt;code&gt;u32&lt;/code&gt;と見做して値を取得したいというような課題があるわけです。
+そういうとき、Rustには&lt;a href=&quot;https://crates.io/crates/byteorder&quot;&gt;byteorder&lt;/a&gt;というcrateがあって、👇のようにして数値に変換できます。&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;extern&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;crate&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;byteorder&lt;/span&gt;;
+&lt;span class=&quot;synStatement&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;byteorder&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;{BigEndian, ReadBytesExt};
+
+&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; bytes: &lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;u8&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;vec!&lt;/span&gt;[&lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;, &lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;];
+
+    &lt;span class=&quot;synPreProc&quot;&gt;println!&lt;/span&gt;(&lt;span class=&quot;synConstant&quot;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, (&lt;span class=&quot;synType&quot;&gt;&amp;amp;&lt;/span&gt;bytes[&lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;..&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;]).&lt;span class=&quot;synIdentifier&quot;&gt;read_u32&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;BigEndian&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt;().&lt;span class=&quot;synIdentifier&quot;&gt;unwrap&lt;/span&gt;()); &lt;span class=&quot;synComment&quot;&gt;// =&amp;gt; 257&lt;/span&gt;
+    &lt;span class=&quot;synPreProc&quot;&gt;println!&lt;/span&gt;(&lt;span class=&quot;synConstant&quot;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, (&lt;span class=&quot;synType&quot;&gt;&amp;amp;&lt;/span&gt;bytes[&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;..&lt;span class=&quot;synConstant&quot;&gt;8&lt;/span&gt;]).&lt;span class=&quot;synIdentifier&quot;&gt;read_u32&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;BigEndian&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt;().&lt;span class=&quot;synIdentifier&quot;&gt;unwrap&lt;/span&gt;()); &lt;span class=&quot;synComment&quot;&gt;// =&amp;gt; 258&lt;/span&gt;
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;こういうcrateがあって、そこそこ人気がある（&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/github&quot;&gt;github&lt;/a&gt;で200スターぐらい）っていうことは、低レイヤーな処理をRustにやらせたいという需要はやはり一定あるのかな、と感じます。&lt;/p&gt;
+
+&lt;p&gt;他にも、Rustにはプリミティブな数値型が&lt;a href=&quot;https://rust-lang-ja.github.io/the-rust-programming-language-ja/1.6/book/primitive-types.html#%E6%95%B0%E5%80%A4%E5%9E%8B&quot;&gt;たくさん&lt;/a&gt;あって、用途に応じて使い分けられるのは良いと思いました。&lt;/p&gt;
+
+&lt;p&gt;また、オーバーフローが起きたときにエラーを出してくれるのですが、各数値型には&lt;code&gt;wrapping_add&lt;/code&gt;のようなメソッドが生えておりまして、このメソッドを通して計算をすると、オーバーフローが起こったときにスルーしてくれます。こういうのが明示的に書けるのは良いですね。&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+  &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; a: &lt;span class=&quot;synType&quot;&gt;u8&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;200&lt;/span&gt;;
+  &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; b: &lt;span class=&quot;synType&quot;&gt;u8&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;200&lt;/span&gt;;
+  
+  &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; c: &lt;span class=&quot;synType&quot;&gt;u8&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; a &lt;span class=&quot;synStatement&quot;&gt;+&lt;/span&gt; b;             &lt;span class=&quot;synComment&quot;&gt;// =&amp;gt; panic!&lt;/span&gt;
+  &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; c: &lt;span class=&quot;synType&quot;&gt;u8&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; a.&lt;span class=&quot;synIdentifier&quot;&gt;wrapping_add&lt;/span&gt;(b); &lt;span class=&quot;synComment&quot;&gt;// =&amp;gt; 144&lt;/span&gt;
+}
+&lt;/pre&gt;
+
+
+&lt;h3&gt;Rustの学習コストはやっぱり高い&lt;/h3&gt;
+
+&lt;p&gt;一方で、やはりRustの学習コストは高いなぁと思いました。
+僕自身はライフタイムや型システムを（一応）理解しているので、謎の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B3%A5%F3%A5%D1%A5%A4%A5%EB&quot;&gt;コンパイル&lt;/a&gt;エラーに悩まされるという初心者あるある現象が発生することはなかったですが、&lt;code&gt;move&lt;/code&gt;を避けるために&lt;code&gt;.clone()&lt;/code&gt;を乱発するコードになってしまい、メモリをうまく使えていないなあという気持ちになりました。&lt;/p&gt;
+
+&lt;h2&gt;まとめ&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%BC%D6%CE%D8%A4%CE%BA%C6%C8%AF%CC%C0&quot;&gt;車輪の再発明&lt;/a&gt;を通して学んでいきたい。&lt;/p&gt;
+
+&lt;p&gt;&lt;iframe src=&quot;https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2FPistonDevelopers%2Fimage&quot; title=&quot;PistonDevelopers/image&quot; class=&quot;embed-card embed-webcard&quot; scrolling=&quot;no&quot; frameborder=&quot;0&quot; style=&quot;display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;&quot;&gt;&lt;/iframe&gt;&lt;cite class=&quot;hatena-citation&quot;&gt;&lt;a href=&quot;https://github.com/PistonDevelopers/image&quot;&gt;github.com&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
+&lt;div class=&quot;footnote&quot;&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-2abd379d&quot; name=&quot;f-2abd379d&quot; class=&quot;footnote-number&quot;&gt;*1&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;ちなみにこのプログラムを先生に見せたら「ディジタル情報処理に関係してるかっていうと微妙だねぇ」という返答が返ってきました。先生的には離散&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D5%A1%BC%A5%EA%A5%A8%CA%D1%B4%B9&quot;&gt;フーリエ変換&lt;/a&gt;とかしてほしかったみたいです。&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-f7139cfe&quot; name=&quot;f-f7139cfe&quot; class=&quot;footnote-number&quot;&gt;*2&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;エッジの検出してAAに変換するとかすれば、ディジタル情報処理とみなせると言われました。次の課題はこれです。&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-b4746aaf&quot; name=&quot;f-b4746aaf&quot; class=&quot;footnote-number&quot;&gt;*3&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;僕はバイト列をゴニョゴニョするようなことは普段やらないし、ましてや&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/C%2B%2B&quot;&gt;C++&lt;/a&gt;なんて書い&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A4%BF%A4%B3&quot;&gt;たこ&lt;/a&gt;ともないので、あくまで「LLに比べて」やりやすいということです&lt;/span&gt;&lt;/p&gt;
+&lt;/div&gt;</content>        
+        <category term="Rust" label="Rust" />
+        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <link rel="enclosure" href="https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171022/20171022155958.png" type="image/png" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+    <entry>
+        <title>PNGの規格を簡単に説明する</title>
+        <link href="http://dawn.hateblo.jp/entry/2017/10/22/205417"/>
+        <id>hatenablog://entry/8599973812310374768</id>
+        <published>2017-10-22T20:54:17+09:00</published>
+        <updated>2018-05-30T21:17:06+09:00</updated>        <summary type="html">PNGの規格を勉強する機会があったので、その内容を簡単に説明します*1。 PNGはいくつかの&quot;チャンク&quot;が集まって構成されています。例えば、IHDRチャンクやIDATチャンク、PLTEチャンクなどがあります。では、PNGファイルという単なるバイト列から、どのようにチャンクを抽出すれば良いのでしょうか？ これは、PNGファイルの構造を知ることでわかります。 PNGファイルの構造 PNGファイルの構造は、以下のようになっています： ファイル先頭の8byteは 必ず 137, 80, 78, 71, 13, 10, 26, 10である それ以降のバイト列は、次の構造の繰り返しである 先頭の4byte…</summary>
+        <content type="html">&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;の規格を勉強する機会があったので、その内容を簡単に説明します&lt;a href=&quot;#f-195c01ee&quot; name=&quot;fn-195c01ee&quot; title=&quot;PNGの規格自体はRFCで公開されている&quot;&gt;*1&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;はいくつかの&quot;チャンク&quot;が集まって構成されています。例えば、&lt;code&gt;IHDR&lt;/code&gt;チャンクや&lt;code&gt;IDAT&lt;/code&gt;チャンク、&lt;code&gt;PLTE&lt;/code&gt;チャンクなどがあります。では、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルという単なるバイト列から、どのようにチャンクを抽出すれば良いのでしょうか？&lt;/p&gt;
+
+&lt;p&gt;これは、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルの構造を知ることでわかります。&lt;/p&gt;
+
+&lt;h2&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルの構造&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルの構造は、以下のようになっています：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;ファイル先頭の8byteは &lt;em&gt;必ず&lt;/em&gt; &lt;code&gt;137, 80, 78, 71, 13, 10, 26, 10&lt;/code&gt;である&lt;/li&gt;
+&lt;li&gt;それ以降のバイト列は、次の構造の繰り返しである
+
+&lt;ul&gt;
+&lt;li&gt;先頭の4byteは、チャンクのサイズを表す(&lt;em&gt;Length&lt;/em&gt;)&lt;/li&gt;
+&lt;li&gt;次の4byteは、チャンクの種類を表す(&lt;em&gt;Chunk Type&lt;/em&gt;)
+
+&lt;ul&gt;
+&lt;li&gt;例えば&lt;code&gt;IHDR&lt;/code&gt;とか&lt;code&gt;IDAT&lt;/code&gt;とか&lt;code&gt;PLTE&lt;/code&gt;になったりする&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;次の&lt;em&gt;n&lt;/em&gt;byteは、チャンクのデータを表す(Chunk Data)
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;n&lt;/em&gt;はLengthの値&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;次の4byteは、&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/CRC&quot;&gt;CRC&lt;/a&gt;を表す(&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/CRC&quot;&gt;CRC&lt;/a&gt;)
+
+&lt;ul&gt;
+&lt;li&gt;いわゆる誤り検出のためのデータ&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;この構造に従って&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルをパースすると、複数のチャンクを取りだすことができます。&lt;br /&gt;
+あとはこれらのチャンクを画像として解釈すればいっちょう上がりというわけです。&lt;/p&gt;
+
+&lt;h2&gt;重要なチャンク&lt;/h2&gt;
+
+&lt;p&gt;画像データを取得するために必須のチャンクについて解説します。&lt;/p&gt;
+
+&lt;h3&gt;IHDRチャンク&lt;/h3&gt;
+
+&lt;p&gt;まず、チャンクの中から、&lt;code&gt;IHDR&lt;/code&gt;チャンクを探してきましょう。こいつはいわゆるヘッダーです。&lt;br /&gt;
+&lt;code&gt;Width&lt;/code&gt;, &lt;code&gt;Height&lt;/code&gt;, &lt;code&gt;Color Type&lt;/code&gt;の３つのデータが含まれています&lt;a href=&quot;#f-4ff9d049&quot; name=&quot;fn-4ff9d049&quot; title=&quot;本当はもっとある&quot;&gt;*2&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;この&lt;code&gt;Color Type&lt;/code&gt;というのが何を表しているのかというと、&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&quot;パレット&quot;を使っているか&lt;/li&gt;
+&lt;li&gt;白黒画像なのか、カラー画像なのか&lt;/li&gt;
+&lt;li&gt;アルファチャンネルが使用されているか（透過画像かどうか）&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;という３つの情報を表しています。&lt;/p&gt;
+
+&lt;h3&gt;PLTEチャンク&lt;/h3&gt;
+
+&lt;p&gt;&lt;code&gt;Color Type&lt;/code&gt;を見て、&quot;パレット&quot;が使われているというのであれば、必ず&lt;code&gt;PLTE&lt;/code&gt;チャンクが存在します。&lt;/p&gt;
+
+&lt;p&gt;この&lt;code&gt;PLTE&lt;/code&gt;チャンクというのは、「画像内で使われ得るすべての色」の情報を持っています。
+例えば、赤一色の画像であれば&lt;code&gt;rgb = [255,0,0]&lt;/code&gt;という値だけを持ちますし、赤と白の二色だけの画像であれば&lt;code&gt;rgb = [255, 0, 0]&lt;/code&gt;に加えて&lt;code&gt;rgb = [255,255,255]&lt;/code&gt;という値も持ちます。また、アルファチャンネルが使用されている場合は、RGBの三色に加えてもう一つ「透過度」を表すbyteが存在します。例えば、「赤色で全く透明ではない色」は&lt;code&gt;[255, 0, 0, 255]&lt;/code&gt;になるわけですね。&lt;/p&gt;
+
+&lt;p&gt;PLTEチャンクのバイト列から色情報を取得するのは簡単で、RGBなら３つづつ（RGB+αなら４つづつ）先頭のバイトからグループ化していけば良いです。&lt;/p&gt;
+
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;p&gt;なんでこんなものが存在するのかというと、その方が画像のサイズを落とせるからです。例えば、３色しか使われない画像を圧縮するとき、すべての&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;ごとに色情報を持つのは容量の無駄です。&lt;br /&gt;
+それよりも、その３色にそれぞれ番号を振っておいて、「この&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;はn番の色、この&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;はm番の色、この&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;は...」というようにデータを持っておくほうが、使う色が少ない場合は容量が少なくて済みます。&lt;/p&gt;
+
+&lt;h3&gt;IDATチャンク&lt;/h3&gt;
+
+&lt;p&gt;ここが画像データの本体です。&lt;code&gt;IDAT&lt;/code&gt;チャンクには、実際の画像データが格納されています&lt;a href=&quot;#f-2dd8d5ee&quot; name=&quot;fn-2dd8d5ee&quot; title=&quot; IDATチャンクは１つのファイルに２つ以上含まれることがあります。これは、チャンクの長さに制限がある一方で、画像データのサイズには制限がないからです。 &quot;&gt;*3&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;IDAT&lt;/code&gt;チャンクに格納されている画像データはDeflate圧縮されています。そのため、&lt;code&gt;IDAT&lt;/code&gt;チャンクから画像データを取得するためには展開する必要があります&lt;a href=&quot;#f-b2e1d620&quot; name=&quot;fn-b2e1d620&quot; title=&quot;Deflateのアルゴリズムに関してはこの記事の解説すべき範囲を外れるので特に解説しないが、実際にはDeflateを取り扱うライブラリが多くの言語で用意されているのでそれに突っ込めば良い。&quot;&gt;*4&lt;/a&gt;。展開されたデータは、👇のように、左上から右下に向かって１&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D4%A5%AF%A5%BB%A5%EB&quot;&gt;ピクセル&lt;/a&gt;づつ色の情報が並んでいます&lt;a href=&quot;#f-39cfde30&quot; name=&quot;fn-39cfde30&quot; title=&quot;インターレースとかが出てくると例外はあります&quot;&gt;*5&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171022/20171022184226.png&quot; alt=&quot;f:id:threetea0407:20171022184226p:plain&quot; title=&quot;f:id:threetea0407:20171022184226p:plain&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;image&quot;&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;h2&gt;画像データを取得する&lt;/h2&gt;
+
+&lt;p&gt;ここまでのチャンクを解釈して画像データを取得するわけですが、結構複雑です。&lt;/p&gt;
+
+&lt;h3&gt;&quot;パレット&quot;を使用する場合&lt;/h3&gt;
+
+&lt;p&gt;この場合は簡単で、画像データを1byteづつ読んで、その値を「パレットのインデックス」として解釈します。&lt;/p&gt;
+
+&lt;p&gt;例えば、PLTEのデータが&lt;code&gt;RGBs = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]&lt;/code&gt;であり、IDATのデータが&lt;code&gt;pixels = [0, 1, 2, 0, 1, 2]&lt;/code&gt;であれば、画像の色データは&lt;code&gt;colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255]]&lt;/code&gt;になるということです&lt;a href=&quot;#f-35dc4d04&quot; name=&quot;fn-35dc4d04&quot; title=&quot;従って、IDATに含まれる各byteの値は、PLTEのデータの長さを超えることはありません。&quot;&gt;*6&lt;/a&gt;。&lt;/p&gt;
+
+&lt;h3&gt;&quot;パレット&quot;を使用しない場合&lt;/h3&gt;
+
+&lt;p&gt;この場合は、&lt;code&gt;IDAT&lt;/code&gt;のデータを直接解釈します。ここが結構複雑です。&lt;/p&gt;
+
+&lt;p&gt;まず、&lt;code&gt;IDAT&lt;/code&gt;のバイト列を&lt;code&gt;Height&lt;/code&gt;の数に分割します。例えば、&lt;code&gt;Height&lt;/code&gt;が100pixelの画像であれば、100個の等しい長さのバイト列に分割するわけです。&lt;br /&gt;
+そして、ここがややこしいのですが、各バイト列の先頭1byteは&lt;code&gt;filter method&lt;/code&gt;を表しています。従って、色情報そのものは2byte目から始まるわけです。&lt;code&gt;filter method&lt;/code&gt;は、&lt;code&gt;None&lt;/code&gt;, &lt;code&gt;Sub&lt;/code&gt;, &lt;code&gt;Up&lt;/code&gt;, &lt;code&gt;Average&lt;/code&gt;, &lt;code&gt;Paeth&lt;/code&gt;の５種類があり、それぞれ違う方法で解釈しないと正しい色情報が得られません。&lt;/p&gt;
+
+&lt;p&gt;ところで、&lt;code&gt;filter method&lt;/code&gt;は各行ごとに設定されています。従って、各行ごとに違う&lt;code&gt;filter method&lt;/code&gt;を使うということができます。&lt;br /&gt;
+実際に、&lt;a href=&quot;https://ja.wikipedia.org/wiki/Portable_Network_Graphics&quot;&gt;Portable Network Graphics - Wikipedia&lt;/a&gt;にデモ画像として掲載されているサイコロの画像(👇)は、行ごとに異なるfilter methodが設定されているようです。&lt;/p&gt;
+
+&lt;p&gt;&lt;span itemscope itemtype=&quot;http://schema.org/Photograph&quot;&gt;&lt;a href=&quot;http://f.hatena.ne.jp/threetea0407/20171022201829&quot; class=&quot;hatena-fotolife&quot; itemprop=&quot;url&quot;&gt;&lt;img src=&quot;https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171022/20171022201829.png&quot; alt=&quot;f:id:threetea0407:20171022201829p:image:w300&quot; title=&quot;f:id:threetea0407:20171022201829p:image:w300&quot; class=&quot;hatena-fotolife&quot; style=&quot;width:300px&quot; itemprop=&quot;image&quot;&gt;&lt;/a&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;h2&gt;まとめ&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルの規格の説明は以上です。&lt;br /&gt;
+あとはプログラムを書けば、実際の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;ファイルを解釈することができます。&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4873118379/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51PnbcCkunL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;詳解 OpenCV 3 ―コンピュータビジョンライブラリを使った画像処理・認識&quot; title=&quot;詳解 OpenCV 3 ―コンピュータビジョンライブラリを使った画像処理・認識&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/4873118379/genya040704-22 /&quot;&gt;詳解 OpenCV 3 ―コンピュータビジョンライブラリを使った画像処理・認識&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; Gary Bradski,Adrian Kaehler,松田晃一,小沼千絵,永田雅人,花形理&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; &lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%AA%A5%E9%A5%A4%A5%EA%A1%BC%A5%B8%A5%E3%A5%D1%A5%F3&quot;&gt;オライリージャパン&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2018/05/26&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; 単行本（ソフトカバー）&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/4873118379/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログを見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+&lt;div class=&quot;footnote&quot;&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-195c01ee&quot; name=&quot;f-195c01ee&quot; class=&quot;footnote-number&quot;&gt;*1&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/PNG&quot;&gt;PNG&lt;/a&gt;の規格自体は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/RFC&quot;&gt;RFC&lt;/a&gt;で&lt;a href=&quot;https://tools.ietf.org/html/rfc2083&quot;&gt;公開されている&lt;/a&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-4ff9d049&quot; name=&quot;f-4ff9d049&quot; class=&quot;footnote-number&quot;&gt;*2&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;本当は&lt;a href=&quot;https://tools.ietf.org/html/rfc2083#section-4&quot;&gt;もっとある&lt;/a&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-2dd8d5ee&quot; name=&quot;f-2dd8d5ee&quot; class=&quot;footnote-number&quot;&gt;*3&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt; IDATチャンクは１つのファイルに２つ以上含まれることがあります。これは、チャンクの長さに制限がある一方で、画像データのサイズには制限がないからです。 &lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-b2e1d620&quot; name=&quot;f-b2e1d620&quot; class=&quot;footnote-number&quot;&gt;*4&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;Deflateの&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A2%A5%EB%A5%B4%A5%EA%A5%BA%A5%E0&quot;&gt;アルゴリズム&lt;/a&gt;に関してはこの記事の解説すべき範囲を外れるので特に解説しないが、実際にはDeflateを取り扱うライブラリが多くの言語で用意されているのでそれに突っ込めば良い。&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-39cfde30&quot; name=&quot;f-39cfde30&quot; class=&quot;footnote-number&quot;&gt;*5&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%A4%A5%F3%A5%BF%A1%BC%A5%EC%A1%BC%A5%B9&quot;&gt;インターレース&lt;/a&gt;とかが出てくると例外はあります&lt;/span&gt;&lt;/p&gt;
+&lt;p class=&quot;footnote&quot;&gt;&lt;a href=&quot;#fn-35dc4d04&quot; name=&quot;f-35dc4d04&quot; class=&quot;footnote-number&quot;&gt;*6&lt;/a&gt;&lt;span class=&quot;footnote-delimiter&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;footnote-text&quot;&gt;従って、IDATに含まれる各byteの値は、PLTEのデータの長さを超えることはありません。&lt;/span&gt;&lt;/p&gt;
+&lt;/div&gt;</content>        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <category term="規格" label="規格" />
+        
+        <link rel="enclosure" href="https://cdn-ak.f.st-hatena.com/images/fotolife/t/threetea0407/20171022/20171022184226.png" type="image/png" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>機能追加と同時にリファクタリングをしてもいいか</title>
+        <link href="http://dawn.hateblo.jp/entry/2017/10/07/000345"/>
+        <id>hatenablog://entry/8599973812305530293</id>
+        <published>2017-10-07T00:03:45+09:00</published>
+        <updated>2017-10-09T23:07:43+09:00</updated>        <summary type="html">「機能追加と同時にリファクタリングをしてもいい」という記事がはてブに上がっていたので、思うところを述べる。 scrapbox.io 結論 機能追加とリファクタリングを同時にするのは 👍 機能追加とリファクタリングを混ぜてPRを出すのは 👎 問題意識 機能追加をするときにリファクタは避けられない。既存の処理を共通化して再利用して機能を追加した方が効率的だからである。 しかし、機能追加とリファクタが混ざったPRを出すのはダメだ。なぜなら、リファクタによって機能が失われていないかどうか確認するのが面倒になるからだ。 解決策 では、どうすればよいのか？ 開発中はリファクタと機能追加を平行して行い、リフ…</summary>
+        <content type="html">&lt;p&gt;「機能追加と同時に&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%EA%A5%D5%A5%A1%A5%AF%A5%BF%A5%EA%A5%F3%A5%B0&quot;&gt;リファクタリング&lt;/a&gt;をしてもいい」という記事が&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A4%CF%A4%C6%A5%D6&quot;&gt;はてブ&lt;/a&gt;に上がっていたので、思うところを述べる。&lt;/p&gt;
+
+&lt;p&gt;&lt;iframe src=&quot;https://hatenablog-parts.com/embed?url=https%3A%2F%2Fscrapbox.io%2Fshokai%2F%25E6%25A9%259F%25E8%2583%25BD%25E8%25BF%25BD%25E5%258A%25A0%25E3%2581%25A8%25E5%2590%258C%25E6%2599%2582%25E3%2581%25AB%25E3%2583%25AA%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25AF%25E3%2582%25BF%25E3%2583%25AA%25E3%2583%25B3%25E3%2582%25B0%25E3%2582%2592%25E3%2581%2597%25E3%2581%25A6%25E3%2582%2582%25E3%2581%2584%25E3%2581%2584&quot; title=&quot;機能追加と同時にリファクタリングをしてもいい - 橋本商会 - Scrapbox&quot; class=&quot;embed-card embed-webcard&quot; scrolling=&quot;no&quot; frameborder=&quot;0&quot; style=&quot;display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;&quot;&gt;&lt;/iframe&gt;&lt;cite class=&quot;hatena-citation&quot;&gt;&lt;a href=&quot;https://scrapbox.io/shokai/%E6%A9%9F%E8%83%BD%E8%BF%BD%E5%8A%A0%E3%81%A8%E5%90%8C%E6%99%82%E3%81%AB%E3%83%AA%E3%83%95%E3%82%A1%E3%82%AF%E3%82%BF%E3%83%AA%E3%83%B3%E3%82%B0%E3%82%92%E3%81%97%E3%81%A6%E3%82%82%E3%81%84%E3%81%84&quot;&gt;scrapbox.io&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
+
+&lt;h3&gt;結論&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;機能追加と&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%EA%A5%D5%A5%A1%A5%AF%A5%BF%A5%EA%A5%F3%A5%B0&quot;&gt;リファクタリング&lt;/a&gt;を同時にするのは 👍&lt;/li&gt;
+&lt;li&gt;機能追加と&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%EA%A5%D5%A5%A1%A5%AF%A5%BF%A5%EA%A5%F3%A5%B0&quot;&gt;リファクタリング&lt;/a&gt;を混ぜてPRを出すのは 👎&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;問題意識&lt;/h3&gt;
+
+&lt;p&gt;機能追加をするときにリファクタは避けられない。既存の処理を共通化して再利用して機能を追加した方が効率的だからである。&lt;/p&gt;
+
+&lt;p&gt;しかし、機能追加とリファクタが混ざったPRを出すのはダメだ。なぜなら、リファクタによって機能が失われていないかどうか確認するのが面倒になるからだ。&lt;/p&gt;
+
+&lt;h3&gt;解決策&lt;/h3&gt;
+
+&lt;p&gt;では、どうすればよいのか？&lt;/p&gt;
+
+&lt;p&gt;開発中はリファクタと機能追加を平行して行い、リファクタと機能追加のPull Requestを別々に出せば良いのである。&lt;/p&gt;
+
+&lt;h3&gt;手順&lt;/h3&gt;
+
+&lt;p&gt;この解決策を実行するには以下のようにする：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;開発中はリファクタと機能追加を同時並行で行い、適宜コミットする。&lt;/li&gt;
+&lt;li&gt;PRを作成する前に&lt;code&gt;git rebase -i&lt;/code&gt;で &lt;strong&gt;コミットを入れ替え&lt;/strong&gt; 、「リファクタのみのブランチ」と「機能追加のみのブランチ」を作成する。&lt;/li&gt;
+&lt;li&gt;それぞれのブランチについてPull Requestを作成する。&lt;/li&gt;
+&lt;li&gt;レビュアーは、「リファクタのみのブランチ」をレビュー＆マージした後に、「機能追加のみのブランチ」のレビューを行う。&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;つまり、開発完了時の&lt;/p&gt;
+
+&lt;pre class=&quot;code&quot; data-lang=&quot;&quot; data-unlink&gt;* implement B &amp;lt;-- some_new_feature
+*  refactor Y
+* implement A
+*  refactor X
+*        base&lt;/pre&gt;
+
+
+&lt;p&gt;という歴史を、&lt;/p&gt;
+
+&lt;pre class=&quot;code&quot; data-lang=&quot;&quot; data-unlink&gt;* implement B &amp;lt;-- some_new_feature
+* implement A
+*  refactor Y &amp;lt;-- refactor_for_new_feature
+*  refactor X
+*        base&lt;/pre&gt;
+
+
+&lt;p&gt;のように書き換え、２つのPull Requestを作成するのである。&lt;/p&gt;
+
+&lt;p&gt;このようにすれば、「機能追加とリファクタは同時にやりたい」という&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%CD%DF%B5%E1&quot;&gt;欲求&lt;/a&gt;と、「機能追加とリファクタは別にレビューしたい」という&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%CD%DF%B5%E1&quot;&gt;欲求&lt;/a&gt;を両立させることができる。&lt;/p&gt;
+
+&lt;h3&gt;元記事に対する感想&lt;/h3&gt;
+
+&lt;p&gt;「リファクタと機能実装を分けると、リファクタの方のPRでは「設計が壊れ」ているコードをレビューしなければいけないので良くない」みたいな記述があったが、ちゃんと意味のあるリファクタであれば、それはそれとして独立した一つのPRになると思う。「リファクタのPRは『設計が壊れ』ている」ことは、変なリファクタをしてるからなのではないかと思う。&lt;/p&gt;
+
+&lt;p&gt;また、「&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/github&quot;&gt;github&lt;/a&gt;のクソUIのせいで、リファクタと機能実装が混ぜ込まれたPRがレビューしづらい」という意味の記述があったが、ほならねとしか言えない。そもそもdiffを出してるのは、変更範囲だけを見たいという&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%CD%DF%B5%E1&quot;&gt;欲求&lt;/a&gt;があるからであって、「全体を見てもらえばもっとわかりやすいんです！！！」というのはレビュワーに対する負荷を増やすだけだ。&lt;/p&gt;
+</content>        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <link rel="enclosure" href="https://cdn.blog.st-hatena.com/images/theme/og-image-1500.png" type="image/png" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+    
+    
+    <entry>
+        <title>iter()とinto_iter()の違いを整理した</title>
+        <link href="http://dawn.hateblo.jp/entry/2017/07/24/165933"/>
+        <id>hatenablog://entry/8599973812282380778</id>
+        <published>2017-07-24T16:59:33+09:00</published>
+        <updated>2018-05-30T21:16:20+09:00</updated>        <summary type="html">VectorをIteratorに変換する時にいつも混乱していたので整理した。 混乱 あるVectorの要素すべてを3倍するコードを考える。 fn main() { let vec1 = vec![1,2,3,4,5]; let vec2 = vec1.iter() .map(|i| i * 3) .collect::&lt;Vec&lt;i32&gt;&gt;(); println!(&quot;{:?}&quot;, vec1); println!(&quot;{:?}&quot;, vec2); } このコードはコンパイルできるが、以下のような疑問がある。 5行目で vec1はなぜ使えるのか？ 3行目の vec1.iter()で使われているじゃないか！…</summary>
+        <content type="html">&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;を&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Iterator&quot;&gt;Iterator&lt;/a&gt;に変換する時にいつも混乱していたので整理した。&lt;/p&gt;
+
+&lt;h2&gt;混乱&lt;/h2&gt;
+
+&lt;p&gt;ある&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;の要素すべてを3倍するコードを考える。&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec1 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;vec!&lt;/span&gt;[&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;5&lt;/span&gt;];
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec2 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; vec1.&lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;()
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;)
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i32&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+
+    &lt;span class=&quot;synPreProc&quot;&gt;println!&lt;/span&gt;(&lt;span class=&quot;synConstant&quot;&gt;&amp;quot;{:?}&amp;quot;&lt;/span&gt;, vec1);
+    &lt;span class=&quot;synPreProc&quot;&gt;println!&lt;/span&gt;(&lt;span class=&quot;synConstant&quot;&gt;&amp;quot;{:?}&amp;quot;&lt;/span&gt;, vec2);
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;このコードは&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B3%A5%F3%A5%D1%A5%A4%A5%EB&quot;&gt;コンパイル&lt;/a&gt;できるが、以下のような疑問がある。&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;5行目で &lt;code&gt;vec1&lt;/code&gt;はなぜ使えるのか？ 3行目の &lt;code&gt;vec1.iter()&lt;/code&gt;で使われているじゃないか！&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;map(|i| i * 3)&lt;/code&gt;の &lt;code&gt;i&lt;/code&gt;は参照なのか値なのか？&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;これらの疑問に関する答えは、&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;iter()&lt;/code&gt;は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;をmoveしない。&lt;code&gt;into_iter()&lt;/code&gt;は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;をmoveする。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;iter()&lt;/code&gt;は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;から「参照のコレクションである&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Iterator&quot;&gt;Iterator&lt;/a&gt;」を作成し、&lt;code&gt;into_iter()&lt;/code&gt;は&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;から「値のコレクションである&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Iterator&quot;&gt;Iterator&lt;/a&gt;」を作成する。&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;ということになる。&lt;/p&gt;
+
+&lt;h2&gt;&lt;code&gt;into_iter()&lt;/code&gt;の挙動&lt;/h2&gt;
+
+&lt;h3&gt;呼び出し元の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;の所有権&lt;/h3&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec1 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;vec!&lt;/span&gt;[&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;5&lt;/span&gt;];
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec2 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; vec1.&lt;span class=&quot;synIdentifier&quot;&gt;into_iter&lt;/span&gt;()
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;)
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i32&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+
+    &lt;span class=&quot;synPreProc&quot;&gt;println!&lt;/span&gt;(&lt;span class=&quot;synConstant&quot;&gt;&amp;quot;{:?}&amp;quot;&lt;/span&gt;, vec1); &lt;span class=&quot;synComment&quot;&gt;// Error!&lt;/span&gt;
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;このコードは&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B3%A5%F3%A5%D1%A5%A4%A5%EB&quot;&gt;コンパイル&lt;/a&gt;できない。というのも、3行目の &lt;code&gt;into_iter()&lt;/code&gt;は&lt;code&gt;vec1&lt;/code&gt;をmoveするからである。&lt;/p&gt;
+
+&lt;p&gt;このように、 &lt;code&gt;into_iter()&lt;/code&gt;は、呼び出し元の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;をmoveする。&lt;/p&gt;
+
+&lt;h3&gt;mapに渡される要素は参照なのか？&lt;/h3&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec1 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;vec!&lt;/span&gt;[&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;5&lt;/span&gt;];
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec2 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; vec1.&lt;span class=&quot;synIdentifier&quot;&gt;into_iter&lt;/span&gt;()
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;synType&quot;&gt;*&lt;/span&gt;i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;) &lt;span class=&quot;synComment&quot;&gt;// Error!&lt;/span&gt;
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i32&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;このコードは&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B3%A5%F3%A5%D1%A5%A4%A5%EB&quot;&gt;コンパイル&lt;/a&gt;できない。というのも、4行目の &lt;code&gt;map(|i| *i * 3)&lt;/code&gt;の &lt;code&gt;i&lt;/code&gt;は、参照ではなく値だからである。&lt;/p&gt;
+
+&lt;p&gt;このように、&lt;code&gt;into_iter()&lt;/code&gt;に連なる &lt;code&gt;map&lt;/code&gt;には、参照ではなく&lt;strong&gt;値&lt;/strong&gt;が渡される。&lt;/p&gt;
+
+&lt;h2&gt;&lt;code&gt;iter()&lt;/code&gt;の挙動&lt;/h2&gt;
+
+&lt;h3&gt;呼び出し元の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;の所有権&lt;/h3&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec1 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;vec!&lt;/span&gt;[&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;5&lt;/span&gt;];
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec2 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; vec1.&lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;()
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;)
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i32&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+
+    &lt;span class=&quot;synPreProc&quot;&gt;println!&lt;/span&gt;(&lt;span class=&quot;synConstant&quot;&gt;&amp;quot;{:?}&amp;quot;&lt;/span&gt;, vec1); &lt;span class=&quot;synComment&quot;&gt;// OK!&lt;/span&gt;
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;このコードは&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B3%A5%F3%A5%D1%A5%A4%A5%EB&quot;&gt;コンパイル&lt;/a&gt;できる。&lt;code&gt;iter()&lt;/code&gt;は&lt;code&gt;vec1&lt;/code&gt;をmoveしないからである。&lt;/p&gt;
+
+&lt;p&gt;このように、 &lt;code&gt;iter()&lt;/code&gt;は、呼び出し元の&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;をmoveしない。&lt;/p&gt;
+
+&lt;h3&gt;mapに渡される要素は参照なのか？&lt;/h3&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec1 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;vec!&lt;/span&gt;[&lt;span class=&quot;synConstant&quot;&gt;1&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;4&lt;/span&gt;,&lt;span class=&quot;synConstant&quot;&gt;5&lt;/span&gt;];
+    &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec2 &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; vec1.&lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;()
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;synType&quot;&gt;*&lt;/span&gt;i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;3&lt;/span&gt;) &lt;span class=&quot;synComment&quot;&gt;// OK!&lt;/span&gt;
+                   .&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i32&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;このコードは&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%B3%A5%F3%A5%D1%A5%A4%A5%EB&quot;&gt;コンパイル&lt;/a&gt;できる。4行目の &lt;code&gt;map(|i| *i * 3)&lt;/code&gt;の &lt;code&gt;i&lt;/code&gt;は、値ではなく参照だからである。&lt;/p&gt;
+
+&lt;p&gt;このように、&lt;code&gt;iter()&lt;/code&gt;に連なる &lt;code&gt;map&lt;/code&gt;には、参照が渡される。&lt;/p&gt;
+
+&lt;h2&gt;結論&lt;/h2&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;を&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Iterator&quot;&gt;Iterator&lt;/a&gt;に変換して処理を行いたいとき、&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;その&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;を後で利用するなら&lt;code&gt;iter()&lt;/code&gt;を使う。その場合、&lt;code&gt;map&lt;/code&gt;には要素の参照が渡される。&lt;/li&gt;
+&lt;li&gt;その&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/Vector&quot;&gt;Vector&lt;/a&gt;を後で利用しないなら&lt;code&gt;into_iter()&lt;/code&gt;を使う。その場合、&lt;code&gt;map&lt;/code&gt;には要素の値が渡される。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h2&gt;速度について&lt;/h2&gt;
+
+&lt;p&gt;一応簡単に&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D9%A5%F3%A5%C1%A5%DE%A1%BC%A5%AF&quot;&gt;ベンチマーク&lt;/a&gt;して、&lt;code&gt;iter()&lt;/code&gt;と&lt;code&gt;into_iter()&lt;/code&gt;の間に速度的な差があるのか検証した。
+なんとなく&lt;code&gt;iter()&lt;/code&gt;の方が遅いような気がするが、誤差幅を考えるとほとんど差がないように見える。&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;keyword&quot; href=&quot;http://d.hatena.ne.jp/keyword/%A5%D9%A5%F3%A5%C1%A5%DE%A1%BC%A5%AF&quot;&gt;ベンチマーク&lt;/a&gt;のコード：&lt;/p&gt;
+
+&lt;pre class=&quot;code lang-rust&quot; data-lang=&quot;rust&quot; data-unlink&gt;&lt;span class=&quot;synPreProc&quot;&gt;#![feature(test)]&lt;/span&gt;
+
+&lt;span class=&quot;synStatement&quot;&gt;extern&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;crate&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;test&lt;/span&gt;;
+
+&lt;span class=&quot;synStatement&quot;&gt;pub&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;(vec: &lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i64&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt;) {
+    vec.&lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;().&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;).&lt;span class=&quot;synIdentifier&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i64&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt;();
+}
+
+&lt;span class=&quot;synStatement&quot;&gt;pub&lt;/span&gt; &lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;into_iter&lt;/span&gt;(vec: &lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i64&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt;) {
+    vec.&lt;span class=&quot;synIdentifier&quot;&gt;into_iter&lt;/span&gt;().&lt;span class=&quot;synIdentifier&quot;&gt;map&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt;i&lt;span class=&quot;synStatement&quot;&gt;|&lt;/span&gt; i &lt;span class=&quot;synStatement&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;2&lt;/span&gt;).&lt;span class=&quot;synIdentifier&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i64&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&lt;/span&gt;();
+}
+
+&lt;span class=&quot;synPreProc&quot;&gt;#[cfg(test)]&lt;/span&gt;
+&lt;span class=&quot;synStatement&quot;&gt;mod&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;tests&lt;/span&gt; {
+    &lt;span class=&quot;synStatement&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;super&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;*&lt;/span&gt;;
+    &lt;span class=&quot;synStatement&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;synPreProc&quot;&gt;test&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;Bencher;
+
+    &lt;span class=&quot;synPreProc&quot;&gt;#[bench]&lt;/span&gt;
+    &lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;bench_iter&lt;/span&gt;(b: &lt;span class=&quot;synType&quot;&gt;&amp;amp;mut&lt;/span&gt; Bencher) {
+        &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; range &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;..&lt;span class=&quot;synConstant&quot;&gt;100000&lt;/span&gt;;
+        &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; range.&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i64&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+
+        b.&lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;(vec.&lt;span class=&quot;synIdentifier&quot;&gt;clone&lt;/span&gt;()));
+    }
+
+    &lt;span class=&quot;synPreProc&quot;&gt;#[bench]&lt;/span&gt;
+    &lt;span class=&quot;synStatement&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;bench_into_iter&lt;/span&gt;(b: &lt;span class=&quot;synType&quot;&gt;&amp;amp;mut&lt;/span&gt; Bencher) {
+        &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; range &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;synConstant&quot;&gt;0&lt;/span&gt;..&lt;span class=&quot;synConstant&quot;&gt;100000&lt;/span&gt;;
+        &lt;span class=&quot;synStatement&quot;&gt;let&lt;/span&gt; vec &lt;span class=&quot;synStatement&quot;&gt;=&lt;/span&gt; range.&lt;span class=&quot;synIdentifier&quot;&gt;collect&lt;/span&gt;&lt;span class=&quot;synSpecial&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;Vec&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;synType&quot;&gt;i64&lt;/span&gt;&lt;span class=&quot;synStatement&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;();
+
+        b.&lt;span class=&quot;synIdentifier&quot;&gt;iter&lt;/span&gt;(&lt;span class=&quot;synStatement&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;synIdentifier&quot;&gt;into_iter&lt;/span&gt;(vec.&lt;span class=&quot;synIdentifier&quot;&gt;clone&lt;/span&gt;()));
+    }
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;結果：&lt;/p&gt;
+
+&lt;pre class=&quot;code&quot; data-lang=&quot;&quot; data-unlink&gt;&amp;gt; cargo bench
+   Compiling iterator-bench v0.1.0
+    Finished release [optimized] target(s) in 0.61 secs
+     Running target/release/deps/iterator_bench-b01db65774dc9996
+
+running 2 tests
+test tests::bench_into_iter ... bench:      38,553 ns/iter (+/- 14,812)
+test tests::bench_iter      ... bench:      39,507 ns/iter (+/- 20,207)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 2 measured; 0 filtered out&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;div class=&quot;hatena-asin-detail&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/1491927283/genya040704-22 /&quot;&gt;&lt;img src=&quot;https://images-fe.ssl-images-amazon.com/images/I/51cdXICI6nL._SL160_.jpg&quot; class=&quot;hatena-asin-detail-image&quot; alt=&quot;Programming Rust: Fast, Safe Systems Development&quot; title=&quot;Programming Rust: Fast, Safe Systems Development&quot;&gt;&lt;/a&gt;&lt;div class=&quot;hatena-asin-detail-info&quot;&gt;&lt;p class=&quot;hatena-asin-detail-title&quot;&gt;&lt;a href=&quot;http://www.amazon.co.jp/exec/obidos/ASIN/1491927283/genya040704-22 /&quot;&gt;Programming Rust: Fast, Safe Systems Development&lt;/a&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;作者:&lt;/span&gt; Jim Blandy,Jason Orendorff&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;出版社/メーカー:&lt;/span&gt; Oreilly &amp; Associates Inc&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;発売日:&lt;/span&gt; 2017/12/21&lt;/li&gt;&lt;li&gt;&lt;span class=&quot;hatena-asin-detail-label&quot;&gt;メディア:&lt;/span&gt; ペーパーバック&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://d.hatena.ne.jp/asin/1491927283/genya040704-22 &quot; target=&quot;_blank&quot;&gt;この商品を含むブログを見る&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div class=&quot;hatena-asin-detail-foot&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;
+</content>        
+        <category term="Rust" label="Rust" />
+        
+        <category term="プログラミング" label="プログラミング" />
+        
+        <link rel="enclosure" href="https://images-fe.ssl-images-amazon.com/images/I/51cdXICI6nL._SL160_.jpg" type="image/jpeg" length="0" />
+
+        <author>
+            <name>threetea0407</name>
+        </author>
+    </entry>
+    
+  
+</feed>
