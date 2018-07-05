@@ -22,6 +22,8 @@ description:         Please see the README on GitHub at <https://github.com/geny
 dependencies:
 - base >= 4.7 && < 5
 - feed == 1.*
+- time == 1.*
+- text == 1.*
 
 data-dir: data
 data-files: files/*.xml
