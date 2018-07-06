@@ -23,7 +23,7 @@ import qualified Data.Text.Lazy as Lazy
 import qualified Text.HTML.TagSoup as TS
 import GHC.Exts (sortWith)
 
-data CommonItem = CommonItem { itemTitle :: Text, itemUrl :: Text, itemAuthor :: Text, itemPublished :: UTCTime, itemContent :: Text } deriving Show
+data CommonItem = CommonItem { itemTitle :: Text, itemUrl :: Text, itemPublished :: UTCTime, itemContent :: Text } deriving Show
 
 parseTimeStringISO8601 :: String -> Maybe UTCTime
 parseTimeStringISO8601 = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%z"
@@ -43,23 +43,21 @@ fromAtomEntry :: AF.Entry -> Maybe CommonItem
 fromAtomEntry entry = do
     let title = (pack . AF.txtToString . AF.entryTitle) entry
     url <- ((fmap AF.linkHref) . listToMaybe . AF.entryLinks) entry
-    author <- ((fmap AF.personName) . listToMaybe . AF.entryAuthors) entry
     publishedText <- AF.entryPublished entry
     published <- (parseTimeStringISO8601 . unpack) publishedText
     content <- fmap fromEntryContentToText $ AF.entryContent entry
 
-    return CommonItem { itemTitle = title , itemUrl = url, itemAuthor = author , itemPublished = published, itemContent = content }
+    return CommonItem { itemTitle = title , itemUrl = url , itemPublished = published, itemContent = content }
 
 fromRss2Entry :: R2S.RSSItem -> Maybe CommonItem
 fromRss2Entry item = do
     title <- R2S.rssItemTitle item
     url <- R2S.rssItemLink item
-    author <- R2S.rssItemLink item
     publishedText <- R2S.rssItemPubDate item
     published <- parseTimeStringRFC822 . unpack $ publishedText
     content <- R2S.rssItemDescription item
 
-    return CommonItem { itemTitle = title , itemUrl = url, itemAuthor = author , itemPublished = published, itemContent = content }
+    return CommonItem { itemTitle = title , itemUrl = url , itemPublished = published, itemContent = content }
 
 composeFeeds :: [Feed] -> [CommonItem]
 composeFeeds [] = []
@@ -71,11 +69,9 @@ toAtomEntry :: CommonItem -> AF.Entry
 toAtomEntry (CommonItem
     { itemTitle = title
     , itemUrl = url
-    , itemAuthor = author
     , itemPublished = published
     , itemContent = content }) = (AF.nullEntry url (AF.TextString title) (pack $ formatTimeISO8601 published))
-        { AF.entryAuthors = [AF.nullPerson { AF.personName = author }]
-        , AF.entryLinks = [AF.nullLink url]
+        { AF.entryLinks = [AF.nullLink url]
         , AF.entryContent = Just (AF.TextContent . T.take 100 . TS.innerText . TS.parseTags $ content)
         }
 
