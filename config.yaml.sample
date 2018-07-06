@@ -1,0 +1,6 @@
+feedId: "http://example.com"
+feedTitle: "Deruta example"
+sources:
+    - "http://example1.blog.com/feed"
+    - "https://example2.blog.com/feed"
+
