@@ -20,6 +20,8 @@ import Data.List (sortBy)
 import qualified Text.XML as C
 import Data.XML.Types as XML
 import qualified Data.Text.Lazy as Lazy
+import qualified Text.HTML.TagSoup as TS
+import GHC.Exts (sortWith)
 
 data CommonItem = CommonItem { itemTitle :: Text, itemUrl :: Text, itemAuthor :: Text, itemPublished :: UTCTime, itemContent :: Text } deriving Show
 
@@ -74,7 +76,7 @@ toAtomEntry (CommonItem
     , itemContent = content }) = (AF.nullEntry url (AF.TextString title) (pack $ formatTimeISO8601 published))
         { AF.entryAuthors = [AF.nullPerson { AF.personName = author }]
         , AF.entryLinks = [AF.nullLink url]
-        , AF.entryContent = Just (AF.TextContent $ T.take 100 content)
+        , AF.entryContent = Just (AF.TextContent . T.take 100 . TS.innerText . TS.parseTags $ content)
         }
 
 createAtomFeed :: Text -> Text -> [CommonItem] -> AF.Feed
@@ -82,5 +84,5 @@ createAtomFeed feedId title commonItems = feed
     where
         (lastUpdated :: UTCTime) = maximum $ map itemPublished commonItems
         feed = (AF.nullFeed feedId (AF.TextString title) (pack $ formatTimeISO8601 lastUpdated))
-            { AF.feedEntries = map toAtomEntry commonItems
+            { AF.feedEntries = map toAtomEntry . reverse . sortWith itemPublished $ commonItems
             }
