@@ -14,6 +14,9 @@ import qualified Text.XML as C
 import Data.XML.Types as XML
 import qualified Data.Text.Lazy as Lazy
 import Data.Maybe (fromJust)
+import Control.Monad.IO.Class
+
+import Web.Scotty
 
 import Paths_deruta
 
@@ -25,9 +28,12 @@ renderFeed :: AF.Feed -> Maybe Lazy.Text
 renderFeed = fmap (C.renderText C.def) . elementToDoc . xmlFeed
 
 main :: IO ()
-main = do
-    feeds <- mapM (\f -> parseFeedFromFile =<< getDataFileName f) ["files/genya0407-atom.xml", "files/genya0407-rss.xml"]
-    let newAtomFeedId = "http://example.com"
-    let newAtomFeedTitle = "Example feed"
-    let composedAtomFeed = createAtomFeed newAtomFeedId newAtomFeedTitle . composeFeeds $ feeds
-    LTI.putStrLn . fromJust $ renderFeed composedAtomFeed
+main = scotty 3000 $ do
+    get "/feed" $ do
+        feeds <- liftIO $ mapM (\f -> parseFeedFromFile =<< getDataFileName f) ["files/genya0407-atom.xml", "files/genya0407-rss.xml"]
+        let newAtomFeedId = "http://example.com"
+        let newAtomFeedTitle = "Example feed"
+        let composedAtomFeed = createAtomFeed newAtomFeedId newAtomFeedTitle . composeFeeds $ feeds
+        let feed_xml_text = fromJust $ renderFeed composedAtomFeed
+        text feed_xml_text
+        setHeader "Content-Type" "text/xml"
