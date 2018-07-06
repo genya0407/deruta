@@ -11,7 +11,7 @@ import Data.Time.Format (parseTimeM, defaultTimeLocale, rfc822DateFormat)
 import Data.Time.Clock (UTCTime)
 import Data.Text (pack, unpack, Text)
 import qualified Data.Text.IO as TI
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, listToMaybe, catMaybes)
 import Control.Monad (forM)
 import Data.List (sortBy)
 
@@ -25,21 +25,24 @@ parseTimeStringRFC822 = parseTimeM True defaultTimeLocale rfc822DateFormat
 
 data CommonItem = CommonItem { title :: Text, url :: Text, author :: Text, published :: UTCTime } deriving Show
 
-fromAtomEntry :: AF.Entry -> CommonItem
-fromAtomEntry entry = CommonItem
-    { title = (pack . AF.txtToString . AF.entryTitle) entry
-    , url = (AF.linkHref . head . AF.entryLinks) entry
-    , author = (AF.personName . head . AF.entryAuthors) entry
-    , published = (fromJust . parseTimeStringISO8601 . unpack . fromJust . AF.entryPublished) entry
-    }
+fromAtomEntry :: AF.Entry -> Maybe CommonItem
+fromAtomEntry entry = do
+    let t = (pack . AF.txtToString . AF.entryTitle) entry
+    u <- ((fmap AF.linkHref) . listToMaybe . AF.entryLinks) entry
+    a <- ((fmap AF.personName) . listToMaybe . AF.entryAuthors) entry
+    pText <- AF.entryPublished entry
+    p <- (parseTimeStringISO8601 . unpack) pText
+    return CommonItem { title = t , url = u, author = a , published = p }
 
-fromRss2Entry :: R2S.RSSItem -> CommonItem
-fromRss2Entry item = CommonItem
-    { title = (fromJust . R2S.rssItemTitle) item
-    , url = (fromJust . R2S.rssItemLink) item
-    , author = (fromJust . R2S.rssItemLink) item
-    , published = (fromJust . parseTimeStringRFC822 . unpack . fromJust . R2S.rssItemPubDate) item
-    }
+fromRss2Entry :: R2S.RSSItem -> Maybe CommonItem
+fromRss2Entry item = do
+    t <- R2S.rssItemTitle item
+    u <- R2S.rssItemLink item
+    a <- R2S.rssItemLink item
+    pText <- R2S.rssItemPubDate item
+    p <- parseTimeStringRFC822 . unpack $ pText
+
+    return CommonItem { title = t, url = u, author = a, published = p }
 
 main :: IO ()
 main = do
@@ -54,6 +57,6 @@ main = do
 
 composeFeeds :: [Feed] -> [CommonItem]
 composeFeeds [] = []
-composeFeeds ((AtomFeed feed):rest) = (map fromAtomEntry (AF.feedEntries feed)) ++ (composeFeeds rest)
-composeFeeds ((RSSFeed feed):rest) = (map fromRss2Entry ((R2S.rssItems . R2S.rssChannel) feed)) ++ (composeFeeds rest)
+composeFeeds ((AtomFeed feed):rest) = (catMaybes . map fromAtomEntry . AF.feedEntries $ feed) ++ (composeFeeds rest)
+composeFeeds ((RSSFeed feed):rest) = (catMaybes . map fromRss2Entry . R2S.rssItems . R2S.rssChannel $ feed) ++ (composeFeeds rest)
 composeFeeds _ = []
