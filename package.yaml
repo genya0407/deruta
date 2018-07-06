@@ -24,6 +24,8 @@ dependencies:
 - feed == 1.*
 - time == 1.*
 - text == 1.*
+- xml-conduit == 1.*
+- xml-types == 0.3.*
 
 data-dir: data
 data-files: files/*.xml

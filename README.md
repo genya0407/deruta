@@ -2,5 +2,5 @@
 
 ## TODO
 
-- `createAtomFeed`
+- Web interface
 - `createRssFeed`
